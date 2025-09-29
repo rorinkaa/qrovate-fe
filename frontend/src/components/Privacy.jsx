@@ -1,0 +1,2 @@
+import React from 'react';
+export default function Privacy(){ return (<section className="card"><h2>Privacy Policy</h2><p>Short privacy summary. Replace with your final policy.</p><ul><li>We collect account email to operate the service.</li><li>For dynamic codes we log scans: time, an approximate IP for anti-abuse, and user-agent.</li><li>We do not sell personal data.</li><li>Contact: support@example.com</li></ul></section>); }

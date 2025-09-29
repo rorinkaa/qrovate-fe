@@ -16,7 +16,7 @@ export default function RegisterForm({ onRegister }){
 
   return (
     <form onSubmit={submit}>
-      <div className="label">Register (Free users get a 7‑day dynamic QR trial)</div>
+      <div className="label">Register (Free: PNG, 1 dynamic; Pro: analytics, SVG/PDF, rules)</div>
       <div className="row">
         <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email"/>
         <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password"/>

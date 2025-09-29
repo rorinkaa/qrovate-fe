@@ -1,0 +1,2 @@
+import React from 'react';
+export default function Terms(){ return (<section className="card"><h2>Terms & Conditions</h2><p>These sample terms describe your use of the QR service, acceptable use, ownership, and disclaimers. Replace with your legal text.</p><ul><li>Service: provides QR generation and dynamic redirects.</li><li>Usage: no spam, malware, or illegal content.</li><li>Data: we store targets and basic analytics (scan counts, timestamps, IP approximations).</li><li>Liability: provided as-is.</li></ul></section>); }
