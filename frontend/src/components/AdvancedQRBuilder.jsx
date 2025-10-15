@@ -1,14 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import QRious from 'qrious';
-import { api, API } from '../api'; // NEW: use your API helper
 
 // Local libs (UMD style attached on window if needed)
 // import '../lib/qrcode-min'; // (placeholder for real generator if needed)
 
 const TYPES = [
   'TEXT','URL','Phone','SMS','Email','Whatsapp','Facetime','Location','WiFi','Event','Vcard',
-  'Crypto','PayPal','UPI Payment','EPC Payment','PIX Payment',
-  'Dynamic' // NEW
+  'Crypto','PayPal','UPI Payment','EPC Payment','PIX Payment'
 ];
 
 const initialState = {
@@ -22,9 +21,6 @@ const initialState = {
   logo: null,
   loading: false
 };
-
-// --- Helpers ---
-const normalizeUrl = (u) => /^https?:\/\//i.test(u || '') ? u : (u ? `https://${u}` : '');
 
 function buildPayload(type, v){
   switch(type){
@@ -66,11 +62,13 @@ function buildPayload(type, v){
       return `${scheme}:${addr}${amount}`;
     }
     case 'PayPal': {
+      // paypal.me/username/amount
       if(v.username && v.amount) return `https://paypal.me/${v.username}/${v.amount}`;
       if(v.username) return `https://paypal.me/${v.username}`;
       return '';
     }
     case 'UPI Payment': {
+      // upi://pay?pa=VPA&pn=Name&am=10&cu=INR
       const params = new URLSearchParams();
       if(v.vpa) params.set('pa', v.vpa);
       if(v.name) params.set('pn', v.name);
@@ -79,13 +77,22 @@ function buildPayload(type, v){
       return `upi://pay?${params.toString()}`;
     }
     case 'EPC Payment': {
-      const lines = ['BCD','001','1','SCT', v.bic||'', v.name||'', v.iban||'', v.amount ? String(v.amount) : '', '', v.remittance||''];
+      // Simple SEPA: "BCD\n001\n1\nSCT\nBIC\nName\nIBAN\nAmount\n\nRemittance\n"
+      const lines = [
+        'BCD','001','1','SCT',
+        v.bic||'',
+        v.name||'',
+        v.iban||'',
+        v.amount ? String(v.amount) : '',
+        '', // purpose
+        v.remittance||''
+      ];
       return lines.join('\n');
     }
     case 'PIX Payment': {
+      // Simplified BR Code payload (placeholder)
       return v.payload || '';
     }
-    // Dynamic uses backend; no local payload rendering
     default: return '';
   }
 }
@@ -128,25 +135,14 @@ export default function AdvancedQRBuilder({ user }){
   const canvasRef = useRef(null);
   const [payload, setPayload] = useState('');
 
-  // --- Dynamic QR local state (NEW) ---
-  const [dynTarget, setDynTarget] = useState('https://example.com');
-  const [currentQR, setCurrentQR] = useState(null); // { id, target, ... }
-  const [dynLoading, setDynLoading] = useState(false);
-  const [dynMsg, setDynMsg] = useState('');
-  const [dynErr, setDynErr] = useState('');
-
   const { errors, isValid } = useValidation(state.type, state.values);
 
-  // Build static payload (skip for Dynamic)
   useEffect(()=>{
-    if(state.type === 'Dynamic') { setPayload(''); return; }
     const p = buildPayload(state.type, state.values);
     setPayload(p);
   }, [state.type, state.values]);
 
-  // Render static payload to canvas (skip for Dynamic)
   useEffect(()=>{
-    if(state.type === 'Dynamic') return;
     if(!payload) return;
     setState(s=>({ ...s, loading: true }));
     const qr = new QRious({
@@ -157,6 +153,7 @@ export default function AdvancedQRBuilder({ user }){
       background: state.background,
       foreground: state.foreground
     });
+    // Draw logo overlay if provided
     if(state.logo){
       const ctx = canvasRef.current.getContext('2d');
       const img = new Image();
@@ -172,16 +169,15 @@ export default function AdvancedQRBuilder({ user }){
     }else{
       setState(s=>({ ...s, loading:false }));
     }
-  }, [state.type, payload, state.size, state.level, state.background, state.foreground, state.logo]);
+  }, [payload, state.size, state.level, state.background, state.foreground, state.logo]);
 
-  // --- UI handlers ---
   function updateValue(key, value){
     setState(s=>({ ...s, values: { ...s.values, [key]: value } }));
   }
   function setType(t){
     setState(s=>({ ...s, type:t, values:{} }));
-    if(t === 'Dynamic'){ setDynMsg(''); setDynErr(''); }
   }
+
   function onLogo(e){
     const f = e.target.files?.[0];
     if(!f) return;
@@ -190,17 +186,19 @@ export default function AdvancedQRBuilder({ user }){
     reader.readAsDataURL(f);
   }
 
-  // --- Downloads (only for static builder) ---
   function downloadPNG(){
     const a = document.createElement('a');
     a.href = canvasRef.current.toDataURL('image/png');
     a.download = 'qr.png'; a.click();
   }
+
   function generateSVGfromCanvas(){
+    // approximate by embedding PNG into SVG (still vector container)
     const data = canvasRef.current.toDataURL('image/png');
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${state.size}" height="${state.size}" viewBox="0 0 ${state.size} ${state.size}"><image href="${data}" x="0" y="0" width="${state.size}" height="${state.size}"/></svg>`;
     return new Blob([svg], {type:'image/svg+xml'});
   }
+
   function downloadSVG(){
     if(!user){ alert('Login required for SVG download.'); return; }
     const blob = generateSVGfromCanvas();
@@ -208,8 +206,11 @@ export default function AdvancedQRBuilder({ user }){
     a.href = URL.createObjectURL(blob);
     a.download = 'qr.svg'; a.click();
   }
+
   function downloadPDF(){
     if(!user){ alert('Login required for PDF download.'); return; }
+    // tiny fake jsPDF replaced with native canvas toDataURL in a PDF shell
+    // For demo: create a simple PDF-like blob (placeholder)
     const img = canvasRef.current.toDataURL('image/png');
     const html = `<html><body style="margin:0"><img src="${img}" width="512"/></body></html>`;
     const blob = new Blob([html], {type:'application/octet-stream'});
@@ -218,146 +219,47 @@ export default function AdvancedQRBuilder({ user }){
     a.download = 'qr.pdf'; a.click();
   }
 
-  // --- Dynamic actions (NEW) ---
-  async function createDynamic(){
-    setDynErr(''); setDynMsg(''); setDynLoading(true);
-    try{
-      const res = await api('/qr/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target: normalizeUrl(dynTarget) })
-      });
-      setCurrentQR(res);
-      setDynMsg('Dynamic QR created.');
-    }catch(e){
-      setDynErr(e.message || 'Failed to create QR');
-    }finally{
-      setDynLoading(false);
-    }
-  }
-  async function updateDynamic(){
-    if(!currentQR?.id) return;
-    setDynErr(''); setDynMsg(''); setDynLoading(true);
-    try{
-      const res = await api('/qr/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: currentQR.id, target: normalizeUrl(dynTarget) })
-      });
-      setCurrentQR(res);
-      setDynMsg('Dynamic QR updated.');
-    }catch(e){
-      setDynErr(e.message || 'Failed to update QR');
-    }finally{
-      setDynLoading(false);
-    }
-  }
-
-  // render
   return (
     <section className="card">
       <div className="label">Advanced QR Builder</div>
-
-      {/* Tabs */}
       <div className="row wrap">
         {TYPES.map(t=>(
           <button key={t} className={state.type===t?'pill active':'pill'} onClick={()=>setType(t)}>{t}</button>
         ))}
       </div>
 
-      {/* Dynamic UI */}
-      {state.type === 'Dynamic' ? (
-        <div className="grid-2">
-          <div>
-            <div className="field">
-              <div className="field-row">
-                <label>Target URL</label>
-              </div>
-              <input
-                value={dynTarget}
-                onChange={e=>setDynTarget(e.target.value)}
-                placeholder="https://facebook.com (or facebook.com)"
-              />
-              <div style={{fontSize:12, color:'#666', marginTop:6}}>
-                We’ll auto-fix missing <code>https://</code>.
-              </div>
-            </div>
-
-            <div className="row" style={{marginTop:10}}>
-              <button onClick={createDynamic} disabled={dynLoading} style={{marginRight:8}}>
-                {dynLoading ? 'Please wait…' : 'Create Dynamic QR'}
-              </button>
-              <button onClick={updateDynamic} disabled={!currentQR?.id || dynLoading}>
-                Update
-              </button>
-            </div>
-
-            {dynMsg && <div style={{ color:'#0a7', marginTop:10 }}>{dynMsg}</div>}
-            {dynErr && <div style={{ color:'#d33', marginTop:10 }}>{dynErr}</div>}
+      <div className="grid-2">
+        <div>
+          <FormFields type={state.type} values={state.values} errors={errors} onChange={updateValue} />
+          <div className="row">
+            <label>Size <input type="range" min="128" max="1024" value={state.size} onChange={e=>setState(s=>({...s,size:+e.target.value}))}/></label>
+            <label>Level
+              <select value={state.level} onChange={e=>setState(s=>({...s,level:e.target.value}))}>
+                <option>L</option><option>M</option><option>Q</option><option>H</option>
+              </select>
+            </label>
           </div>
-
-          <div className="center">
-            {currentQR?.id ? (
-              <>
-                <div className="qr-wrap">
-                  <img
-                    src={`${API}/qr/svg/${currentQR.id}`}
-                    alt="qr"
-                    width={state.size}
-                    height={state.size}
-                    className="qr"
-                    onError={()=>setDynErr('Could not load QR preview (check CORS/CORP headers).')}
-                  />
-                </div>
-                <div className="row" style={{marginTop:10}}>
-                  {/* Via backend redirect (keeps stats) */}
-                  <a href={`${API}/qr/${currentQR.id}`} target="_blank" rel="noreferrer">Open</a>
-                  {/* Or open direct (optional): <a href={normalizeUrl(currentQR.target)} target="_blank" rel="noreferrer">Open direct</a> */}
-                </div>
-                <div style={{marginTop:8, fontSize:12, color:'#666'}}>
-                  ID: <code>{currentQR.id}</code> · Target: <code>{currentQR.target}</code>
-                </div>
-              </>
-            ) : (
-              <div style={{ color:'#666' }}>Create a Dynamic QR to see the preview.</div>
-            )}
+          <div className="row">
+            <label>Foreground <input type="color" value={state.foreground} onChange={e=>setState(s=>({...s,foreground:e.target.value}))}/></label>
+            <label>Background <input type="color" value={state.background} onChange={e=>setState(s=>({...s,background:e.target.value}))}/></label>
+            <label>Logo <input type="file" accept="image/*" onChange={onLogo}/></label>
           </div>
+          {!isValid && <div className="error">Please fix invalid fields before generating.</div>}
         </div>
-      ) : (
-        // --- Static builder (original UI) ---
-        <div className="grid-2">
-          <div>
-            <FormFields type={state.type} values={state.values} errors={errors} onChange={updateValue} />
-            <div className="row">
-              <label>Size <input type="range" min="128" max="1024" value={state.size} onChange={e=>setState(s=>({...s,size:+e.target.value}))}/></label>
-              <label>Level
-                <select value={state.level} onChange={e=>setState(s=>({...s,level:e.target.value}))}>
-                  <option>L</option><option>M</option><option>Q</option><option>H</option>
-                </select>
-              </label>
-            </div>
-            <div className="row">
-              <label>Foreground <input type="color" value={state.foreground} onChange={e=>setState(s=>({...s,foreground:e.target.value}))}/></label>
-              <label>Background <input type="color" value={state.background} onChange={e=>setState(s=>({...s,background:e.target.value}))}/></label>
-              <label>Logo <input type="file" accept="image/*" onChange={onLogo}/></label>
-            </div>
-            {!isValid && <div className="error">Please fix invalid fields before generating.</div>}
-          </div>
 
-          <div className="center">
-            <div className="qr-wrap">
-              {state.loading && <div className="loading">Generating…</div>}
-              <canvas ref={canvasRef} width={state.size} height={state.size} className="qr"></canvas>
-            </div>
-            <div className="row">
-              <button onClick={downloadPNG} disabled={!isValid}>PNG</button>
-              <button onClick={downloadSVG} disabled={!isValid}>SVG (login)</button>
-              <button onClick={downloadPDF} disabled={!isValid}>PDF (login)</button>
-            </div>
-            <textarea readOnly value={payload} style={{width:'100%',height:80, marginTop:10}}/>
+        <div className="center">
+          <div className="qr-wrap">
+            {state.loading && <div className="loading">Generating…</div>}
+            <canvas ref={canvasRef} width={state.size} height={state.size} className="qr"></canvas>
           </div>
+          <div className="row">
+            <button onClick={downloadPNG} disabled={!isValid}>PNG</button>
+            <button onClick={downloadSVG} disabled={!isValid}>SVG (login)</button>
+            <button onClick={downloadPDF} disabled={!isValid}>PDF (login)</button>
+          </div>
+          <textarea readOnly value={payload} style={{width:'100%',height:80, marginTop:10}}/>
         </div>
-      )}
+      </div>
     </section>
   );
 }
