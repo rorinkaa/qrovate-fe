@@ -9,7 +9,6 @@ import AdvancedQRBuilder from './components/AdvancedQRBuilder.jsx';
 import TemplatesGallery from './components/TemplatesGallery.jsx';
 import Terms from './components/Terms.jsx';
 import Privacy from './components/Privacy.jsx';
-import DesignerV2 from './components/DesignerV2.jsx';
 
 import { API } from './api.js';
 
@@ -91,7 +90,6 @@ export default function App(){
               <button className={view==='static'?'pill active':'pill'} onClick={()=>setView('static')}>Static (Create)</button>
               <button className={view==='advanced'?'pill active':'pill'} onClick={()=>setView('advanced')}>Advanced Builder</button>
               <button className={view==='templates'?'pill active':'pill'} onClick={()=>setView('templates')}>Templates</button>
-              <button className={view==='designerV2'?'pill active':'pill'} onClick={()=>setView('designerV2')}>Designer v2</button>
               <button className={view==='terms'?'pill active':'pill'} onClick={()=>setView('terms')}>Terms</button>
               <button className={view==='privacy'?'pill active':'pill'} onClick={()=>setView('privacy')}>Privacy</button>
             </div>
@@ -101,7 +99,6 @@ export default function App(){
           {view==='static' && (<><h1>Static QR Studio</h1><StaticDesigner isPro={user.is_pro}/></>)}
           {view==='advanced' && (<><h1>Advanced QR Builder</h1><AdvancedQRBuilder user={user}/></>)}
           {view==='templates' && (<><h1>Templates Gallery</h1><TemplatesGallery /></>)}
-          {view==='designerV2' && (<><h1>Designer v2</h1><DesignerV2 /></>)}
           {view==='terms' && <Terms />}
           {view==='privacy' && <Privacy />}
         </>
