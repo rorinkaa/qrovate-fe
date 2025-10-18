@@ -41,8 +41,6 @@ export default function Homepage({ onRequestAuth }) {
           </div>
           <div className="hero-art">
             <img src="/hero-qr-1.png" alt="Colorful QR mockup" className="hero-qr float-fast" />
-            <img src="/hero-qr-2.png" alt="Framed QR mockup" className="hero-qr float-med" />
-            <img src="/hero-qr-3.png" alt="Minimal QR mockup" className="hero-qr float-slow" />
           </div>
         </div>
       </section>
