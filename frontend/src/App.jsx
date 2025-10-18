@@ -15,8 +15,8 @@ import { API } from './api.js';
 
 export default function App(){
   const [user, setUser] = useState(null);
-  const [mode, setMode] = useState('login');         // auth tab (login/register)
-  const [view, setView] = useState('dynamic');       // dashboard tab after login
+  const [mode, setMode] = useState('login');
+  const [view, setView] = useState('dynamic'); // start on Dynamic after login
 
   useEffect(()=>{
     const raw = localStorage.getItem('qr_user');
@@ -24,13 +24,19 @@ export default function App(){
   },[]);
 
   function onLogin(u){
+    // persist minimal profile
     localStorage.setItem('qr_user', JSON.stringify(u));
+    // NEW: persist token if the backend returns it in the user object
+    if (u && (u.token || u.jwt)) {
+      localStorage.setItem('token', u.token || u.jwt);
+    }
     setUser(u);
     setView('dynamic');
   }
 
   function logout(){
     localStorage.removeItem('qr_user');
+    localStorage.removeItem('token'); // NEW: clear token on logout
     setUser(null);
     setMode('login');
     setView('dynamic');
@@ -57,7 +63,6 @@ export default function App(){
             <p>No account needed. Download PNG for free. Create an account to unlock SVG/PDF, dynamic QR, and analytics.</p>
             <InstantGenerator isLoggedIn={!!user} />
           </div>
-
           <section className="card">
             <div className="row">
               <button className={mode==='login'?'pill active':'pill'} onClick={()=>setMode('login')}>Login</button>
@@ -73,18 +78,14 @@ export default function App(){
         <>
           <section className="card">
             <div className="row" style={{justifyContent:'space-between', alignItems:'center', gap:8}}>
-              <div>
-                Signed in as <b>{user.email}</b>{' '}
-                {user.is_pro
-                  ? <span className="badge">Pro</span>
-                  : <span className="badge">Free — Trial ends in {user.trial_days_left} days</span>}
+              <div>Signed in as <b>{user.email}</b>{' '}
+                {user.is_pro ? <span className="badge">Pro</span> : <span className="badge">Free — Trial ends in {user.trial_days_left} days</span>}
               </div>
               <div className="row" style={{gap:8}}>
                 {!user.is_pro && <button onClick={upgradeWithStripe}>Upgrade with Stripe</button>}
                 <button onClick={logout}>Logout</button>
               </div>
             </div>
-
             <div className="row wrap" style={{marginTop:10, gap:8}}>
               <button className={view==='dynamic'?'pill active':'pill'} onClick={()=>setView('dynamic')}>Dynamic (Manage)</button>
               <button className={view==='static'?'pill active':'pill'} onClick={()=>setView('static')}>Static (Create)</button>
