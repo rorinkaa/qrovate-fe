@@ -94,11 +94,12 @@ export async function renderStyledQR(canvas, value, opts = {}) {
     allowLogo,
   } = options;
 
-  const labelHeight = frameStyle === 'label' ? Math.round(size * 0.28) : 0;
+  const labelHeight = frameStyle === 'label' ? Math.max(48, Math.round(size * 0.26)) : 0;
+  const labelGap = frameStyle === 'label' ? Math.max(16, Math.round(size * 0.06)) : 0;
   const framePadding = frameStyle === 'none' ? Math.round(size * 0.08) : Math.round(size * 0.14);
   const qrAreaSize = size;
   const totalWidth = qrAreaSize + framePadding * 2;
-  const totalHeight = qrAreaSize + framePadding * 2 + labelHeight;
+  const totalHeight = qrAreaSize + framePadding * 2 + labelGap + labelHeight;
 
   canvas.width = totalWidth;
   canvas.height = totalHeight;
@@ -112,7 +113,7 @@ export async function renderStyledQR(canvas, value, opts = {}) {
   const frameX = framePadding * 0.35;
   const frameY = framePadding * 0.35;
   const frameWidth = totalWidth - frameX * 2;
-  const frameHeight = qrAreaSize + framePadding * 1.3;
+  const frameHeight = totalHeight - frameY * 2;
 
   if (frameStyle === 'rounded' || frameStyle === 'label') {
     const radius = Math.min(frameWidth, frameHeight) * 0.12;
@@ -146,14 +147,17 @@ export async function renderStyledQR(canvas, value, opts = {}) {
   ctx.drawImage(qrCanvas, qrX, qrY, qrAreaSize, qrAreaSize);
 
   if (frameStyle === 'label') {
-    const labelTop = frameY + frameHeight - labelHeight + framePadding * 0.3;
+    const innerPad = framePadding * 0.45;
+    const labelTop = qrY + qrAreaSize + labelGap;
+    const labelWidth = frameWidth - innerPad * 2;
+    const labelRadius = Math.min(24, labelWidth / 2);
     drawRoundedRect(
       ctx,
-      frameX + framePadding * 0.3,
+      frameX + innerPad,
       labelTop,
-      frameWidth - framePadding * 0.6,
-      labelHeight - framePadding * 0.6,
-      999,
+      labelWidth,
+      labelHeight,
+      labelRadius,
       background,
       { color: 'transparent', blur: 0, offsetX: 0, offsetY: 0 }
     );
@@ -161,7 +165,7 @@ export async function renderStyledQR(canvas, value, opts = {}) {
     ctx.font = frameFont;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(frameText, totalWidth / 2, labelTop + (labelHeight - framePadding * 0.6) / 2);
+    ctx.fillText(frameText, totalWidth / 2, labelTop + labelHeight / 2);
   }
 
   if (logoDataUrl && allowLogo) {
