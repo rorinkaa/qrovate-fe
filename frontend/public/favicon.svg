@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="qrGradient" x1="12%" y1="18%" x2="88%" y2="82%">
+      <stop offset="0%" stop-color="#0b5fff"/>
+      <stop offset="48%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#qrGradient)"/>
+  <rect x="10" y="10" width="18" height="18" rx="4" fill="#fff"/>
+  <rect x="36" y="10" width="18" height="18" rx="4" fill="#fff" opacity="0.85"/>
+  <rect x="10" y="36" width="18" height="18" rx="4" fill="#fff" opacity="0.9"/>
+  <rect x="36" y="36" width="18" height="18" rx="4" fill="#fff"/>
+  <rect x="17" y="17" width="4" height="4" rx="1.5" fill="url(#qrGradient)"/>
+  <rect x="43" y="17" width="4" height="4" rx="1.5" fill="url(#qrGradient)"/>
+  <rect x="17" y="43" width="4" height="4" rx="1.5" fill="url(#qrGradient)"/>
+  <rect x="43" y="43" width="4" height="4" rx="1.5" fill="url(#qrGradient)"/>
+</svg>

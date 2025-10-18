@@ -1,37 +1,110 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { api } from '../api';
+import ReCaptchaBox from './ReCaptchaBox.jsx';
 
-export default function RegisterForm({ onRegister }){
+const requireCaptcha = Boolean(import.meta.env.VITE_RECAPTCHA_SITE_KEY);
+
+export default function RegisterForm({ onRegister, onNotice }){
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [plan, setPlan] = useState('free');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState(null);
+  const [captchaKey, setCaptchaKey] = useState(0);
+
+  useEffect(() => { setMsg(''); }, [plan]);
+
+  function ensureCaptcha(){
+    if (!requireCaptcha) return true;
+    if (captchaToken) return true;
+    setMsg('Please complete the captcha challenge first.');
+    return false;
+  }
 
   async function submit(e){
-    e.preventDefault(); setMsg('');
+    e.preventDefault();
+    setMsg('');
     if (busy) return;
+    if (password.length < 8) {
+      setMsg('Password must be at least 8 characters long.');
+      return;
+    }
+    if (!ensureCaptcha()) return;
     setBusy(true);
     try{
       const data = await api('/auth/register',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({email,password})
+        body:JSON.stringify({email,password, plan, captchaToken})
       });
-      const payload = data?.token ? { ...data.user, token: data.token } : data.user;
-      onRegister(payload);
-    }catch(err){ setMsg(err.message); }
-    finally{ setBusy(false); }
+      if (data?.requires_verification) {
+        onNotice?.({
+          type: 'success',
+          text: 'Account created! Check your inbox for a verification link before logging in.'
+        });
+        if (data?.dev_verification_url) {
+          console.info('[dev] verification link:', data.dev_verification_url);
+        }
+        setEmail('');
+        setPassword('');
+        setCaptchaToken(null);
+        setCaptchaKey(k => k + 1);
+      } else {
+        const payload = data?.token ? { ...data.user, token: data.token } : data.user;
+        onNotice?.(null);
+        onRegister(payload);
+      }
+    }catch(err){
+      setMsg(err.message || 'Registration failed.');
+    }finally{
+      setBusy(false);
+    }
   }
 
   return (
-    <form onSubmit={submit}>
-      <div className="label">Register (Free: PNG, 1 dynamic; Pro: analytics, SVG/PDF, rules)</div>
-      <div className="row">
-        <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email"/>
-        <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password"/>
-        <button type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
+    <form className="auth-form" onSubmit={submit}>
+      <div className="auth-field">
+        <label htmlFor="register-email">Email</label>
+        <input
+          id="register-email"
+          type="email"
+          value={email}
+          onChange={e=>setEmail(e.target.value)}
+          placeholder="you@example.com"
+          autoComplete="email"
+          required
+        />
       </div>
-      <div className="small" style={{color:'crimson', marginTop:8}}>{msg}</div>
+      <div className="auth-field">
+        <label htmlFor="register-password">Password</label>
+        <input
+          id="register-password"
+          type="password"
+          value={password}
+          onChange={e=>setPassword(e.target.value)}
+          placeholder="Create a secure password"
+          autoComplete="new-password"
+          required
+        />
+      </div>
+      <div className="auth-field">
+        <label htmlFor="register-plan">Plan</label>
+        <select
+          id="register-plan"
+          value={plan}
+          onChange={e=>setPlan(e.target.value)}
+        >
+          <option value="free">Free — unlimited static QR, 1 dynamic, PNG/SVG exports</option>
+          <option value="pro">Pro — analytics, scheduling, PDF/EPS, team seats</option>
+        </select>
+      </div>
+      {requireCaptcha && <ReCaptchaBox key={captchaKey} onChange={setCaptchaToken} />}
+      <button type="submit" className="btn-primary auth-submit" disabled={busy}>
+        {busy ? 'Creating…' : 'Create account'}
+      </button>
+      <p className="auth-hint">Free plan includes unlimited static QR codes and one dynamic code.</p>
+      {msg && <div className="auth-error">{msg}</div>}
     </form>
   );
 }

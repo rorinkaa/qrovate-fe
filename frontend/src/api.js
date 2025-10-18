@@ -26,13 +26,19 @@ export function withAuth(opts = {}) {
 /** unified API helper */
 export async function api(path, opts = {}) {
   const res = await fetch(API + path, withAuth(opts));
+  const contentType = res.headers.get('content-type') || '';
 
   if (!res.ok) {
-    let msg = 'Request failed';
-    try {
-      const j = await res.json();
-      msg = j.error || msg;
-    } catch {}
+    let payload = null;
+    let message = 'Request failed';
+    if (contentType.includes('application/json')) {
+      try { payload = await res.json(); } catch { payload = null; }
+    } else {
+      const text = await res.text();
+      if (text) payload = { error: text };
+    }
+    if (payload?.error) message = payload.error;
+    else if (payload?.message) message = payload.message;
 
     if (res.status === 401) {
       // clear stale token, keep a clean state
@@ -40,7 +46,17 @@ export async function api(path, opts = {}) {
       // NOTE: we don't force-redirect; UI can handle it gracefully
     }
 
-    throw new Error(msg);
+    const err = new Error(message);
+    err.status = res.status;
+    if (payload) {
+      err.code = payload.code;
+      err.details = payload;
+    }
+    throw err;
+  }
+
+  if (!contentType.includes('application/json')) {
+    return res.text();
   }
 
   return res.json();
