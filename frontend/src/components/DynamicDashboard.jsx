@@ -26,6 +26,11 @@ const STYLE_DEFAULTS = {
 };
 
 const MAX_HISTORY_ITEMS = 60;
+const SIZE_OPTIONS = [
+  { label: 'Web • 256px', value: 256 },
+  { label: 'Print • 512px', value: 512 },
+  { label: 'Large • 1024px', value: 1024 }
+];
 
 function formatNumber(num) {
   return new Intl.NumberFormat().format(Number(num || 0));
@@ -349,6 +354,115 @@ export default function DynamicDashboard({ user }) {
             <TemplateDataForm type={tpl} values={values} onChange={onValueChange} />
             <TemplatePreview type={tpl} values={values} />
           </div>
+
+          <div className="style-stack">
+            <div className="style-section">
+              <div className="style-title">Export size</div>
+              <div className="size-options">
+                {SIZE_OPTIONS.map(opt => (
+                  <button
+                    type="button"
+                    key={opt.value}
+                    className={style.size === opt.value ? 'size-chip active' : 'size-chip'}
+                    onClick={() => onSizeSelect(opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="style-section">
+              <div className="style-title">Colors</div>
+              <div className="row wrap" style={{ gap: 8, marginBottom: 8 }}>
+                <button className={style.colorMode === 'solid' ? 'pill active' : 'pill'} onClick={()=>onStyleChange('colorMode','solid')}>Solid</button>
+                <button className={style.colorMode === 'gradient' ? 'pill active' : 'pill'} onClick={()=>onStyleChange('colorMode','gradient')}>Gradient</button>
+              </div>
+              <div className="row wrap" style={{ gap: 12, marginBottom: 12 }}>
+                <label className="control-field color-field">
+                  <span>Primary</span>
+                  <div className="color-input">
+                    <input type="color" value={style.foreground} onChange={e=>onStyleChange('foreground', e.target.value)} />
+                    <span>{style.foreground.toUpperCase()}</span>
+                  </div>
+                </label>
+                {style.colorMode === 'gradient' && (
+                  <>
+                    <label className="control-field color-field">
+                      <span>Secondary</span>
+                      <div className="color-input">
+                        <input type="color" value={style.foregroundSecondary} onChange={e=>onStyleChange('foregroundSecondary', e.target.value)} />
+                        <span>{style.foregroundSecondary.toUpperCase()}</span>
+                      </div>
+                    </label>
+                    <label className="control-field">
+                      <span>Angle ({Math.round(style.gradientAngle)}°)</span>
+                      <input type="range" min="0" max="360" value={style.gradientAngle} onChange={e=>onStyleChange('gradientAngle', +e.target.value)} />
+                    </label>
+                  </>
+                )}
+              </div>
+              <label className="control-field color-field">
+                <span>Background</span>
+                <div className="color-input">
+                  <input type="color" value={style.background} onChange={e=>onStyleChange('background', e.target.value)} />
+                  <span>{style.background.toUpperCase()}</span>
+                </div>
+              </label>
+            </div>
+
+            <div className="style-section">
+              <div className="style-title">Frame</div>
+              <div className="row wrap" style={{ gap: 8, marginBottom: 8 }}>
+                <button className={style.frameStyle==='none'?'pill active':'pill'} onClick={()=>onStyleChange('frameStyle','none')}>None</button>
+                <button className={style.frameStyle==='rounded'?'pill active':'pill'} onClick={()=>onStyleChange('frameStyle','rounded')}>Rounded</button>
+                <button className={style.frameStyle==='label'?'pill active':'pill'} onClick={()=>onStyleChange('frameStyle','label')}>Label</button>
+              </div>
+              {style.frameStyle !== 'none' && (
+                <div className="row wrap" style={{ gap: 12 }}>
+                  <label className="control-field color-field">
+                    <span>Frame color</span>
+                    <div className="color-input">
+                      <input type="color" value={style.frameColor} onChange={e=>onStyleChange('frameColor', e.target.value)} />
+                      <span>{style.frameColor.toUpperCase()}</span>
+                    </div>
+                  </label>
+                  {style.frameStyle === 'label' && (
+                    <>
+                      <label className="control-field">
+                        <span>Text</span>
+                        <input value={style.frameText} onChange={e=>onStyleChange('frameText', e.target.value)} />
+                      </label>
+                      <label className="control-field color-field">
+                        <span>Text color</span>
+                        <div className="color-input">
+                          <input type="color" value={style.frameTextColor} onChange={e=>onStyleChange('frameTextColor', e.target.value)} />
+                          <span>{style.frameTextColor.toUpperCase()}</span>
+                        </div>
+                      </label>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="style-section">
+              <div className="style-title">Logo overlay</div>
+              {isPro ? (
+                <div className="row wrap" style={{ gap: 12 }}>
+                  <input type="file" accept="image/*" onChange={onLogoUpload} />
+                  <label className="control-field">
+                    <span>Size</span>
+                    <input type="range" min="0.15" max="0.35" step="0.01" value={style.logoSizeRatio} onChange={e=>onStyleChange('logoSizeRatio', parseFloat(e.target.value))} />
+                  </label>
+                  {style.logoDataUrl && <button type="button" onClick={removeLogo}>Remove Logo</button>}
+                </div>
+              ) : (
+                <div className="small">Upgrade to Pro to add a logo overlay</div>
+              )}
+            </div>
+          </div>
+
           <div className="action-row">
             <button onClick={createDynamic} disabled={busy}>{busy ? 'Please wait…' : 'Create Dynamic QR'}</button>
             <button onClick={updateSelected} disabled={busy || !sel?.id}>Update Selected</button>

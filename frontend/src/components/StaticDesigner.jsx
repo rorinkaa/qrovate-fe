@@ -24,6 +24,11 @@ const STYLE_DEFAULTS = {
 
 const SAVED_KEY = 'qr_static_designs';
 const MAX_SAVED = 12;
+const SIZE_OPTIONS = [
+  { label: 'Web • 256px', value: 256 },
+  { label: 'Print • 512px', value: 512 },
+  { label: 'Large • 1024px', value: 1024 }
+];
 
 function clone(obj) {
   return JSON.parse(JSON.stringify(obj || {}));
@@ -48,6 +53,7 @@ export default function StaticDesigner({ isPro }) {
   const [style, setStyle] = useState({ ...STYLE_DEFAULTS });
   const [logo, setLogo] = useState(null);
   const [logoSize, setLogoSize] = useState(0.22);
+  const onSizeSelect = (value) => setStyle(prev => ({ ...prev, size: value }));
   const [designName, setDesignName] = useState('My QR design');
   const [renderInfo, setRenderInfo] = useState({ width: STYLE_DEFAULTS.size, height: STYLE_DEFAULTS.size });
   const [previewTab, setPreviewTab] = useState('qr');
