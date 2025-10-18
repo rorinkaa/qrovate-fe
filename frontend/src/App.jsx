@@ -64,18 +64,6 @@ export default function App(){
     return (
       <div className="landing">
         <Homepage onRequestAuth={requestAuth} />
-
-        <section className="card auth-card">
-          <div className="row" style={{ justifyContent: 'center' }}>
-            <button className={mode==='login'?'pill active':'pill'} onClick={()=>setMode('login')}>Login</button>
-            <button className={mode==='register'?'pill active':'pill'} onClick={()=>setMode('register')}>Register</button>
-          </div>
-          {mode==='login'
-            ? <LoginForm onLogin={handleAuthSuccess}/>
-            : <RegisterForm onRegister={handleAuthSuccess}/>}
-          <div className="small">Demo Pro user: <b>test@pro.com</b> / <b>test1234</b></div>
-        </section>
-
         {authOpen && (
           <div className="modal-overlay" role="dialog" aria-modal="true">
             <div className="modal-card">
