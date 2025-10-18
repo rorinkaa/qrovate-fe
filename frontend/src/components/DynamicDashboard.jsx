@@ -296,7 +296,7 @@ export default function DynamicDashboard({ user }) {
       const updated = await api('/qr/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: sel.id, target, style: stylePayload })
+        body: JSON.stringify({ id: sel.id, target, style: stylePayload, name: qrName })
       });
       const normalized = { ...updated, style: updated.style || {} };
       updateListItem(normalized);
@@ -332,6 +332,10 @@ export default function DynamicDashboard({ user }) {
       <div className="dynamic-grid">
         <div className="dynamic-config">
           <div className="dynamic-forms">
+            <label className="control-field">
+              <span>QR name</span>
+              <input value={qrName} onChange={e => onNameChange(e.target.value)} placeholder="Campaign headline" />
+            </label>
             <TemplateDataForm type={tpl} values={values} onChange={onValueChange} />
             <TemplatePreview type={tpl} values={values} />
           </div>
@@ -402,7 +406,7 @@ export default function DynamicDashboard({ user }) {
               className={sel?.id === it.id ? 'library-card active' : 'library-card'}
               onClick={() => setSel(it)}
             >
-              <span>{it.id.slice(0, 8)}…</span>
+              <span>{it.name || it.id.slice(0, 8)}</span>
               <a href={`${API}/qr/${it.id}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>Open ↗</a>
             </div>
           ))}

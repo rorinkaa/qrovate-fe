@@ -4,10 +4,9 @@ import LoginForm from './components/LoginForm.jsx';
 import RegisterForm from './components/RegisterForm.jsx';
 import StaticDesigner from './components/StaticDesigner.jsx';
 import DynamicDashboard from './components/DynamicDashboard.jsx';
-import AdvancedQRBuilder from './components/AdvancedQRBuilder.jsx';
-import TemplatesGallery from './components/TemplatesGallery.jsx';
 import Terms from './components/Terms.jsx';
 import Privacy from './components/Privacy.jsx';
+import SiteFooter from './components/SiteFooter.jsx';
 import Homepage from './components/Homepage.jsx';
 
 import { API } from './api.js';
@@ -17,6 +16,7 @@ export default function App(){
   const [mode, setMode] = useState('login');
   const [view, setView] = useState('dynamic'); // start on Dynamic after login
   const [authOpen, setAuthOpen] = useState(false);
+  const [infoModal, setInfoModal] = useState(null);
 
   useEffect(()=>{
     const raw = localStorage.getItem('qr_user');
@@ -64,6 +64,7 @@ export default function App(){
     return (
       <div className="landing">
         <Homepage onRequestAuth={requestAuth} />
+        <SiteFooter onShowTerms={()=>setInfoModal('terms')} onShowPrivacy={()=>setInfoModal('privacy')} />
         {authOpen && (
           <div className="modal-overlay" role="dialog" aria-modal="true">
             <div className="modal-card">
@@ -78,64 +79,75 @@ export default function App(){
             </div>
           </div>
         )}
+        {infoModal && (
+          <div className="modal-overlay" role="dialog" aria-modal="true">
+            <div className="modal-card">
+              <button className="modal-close" onClick={()=>setInfoModal(null)} aria-label="Close">&times;</button>
+              {infoModal==='terms' ? <Terms /> : <Privacy />}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
   const nav = [
     { id: 'dynamic', label: 'Dynamic Dashboard', subtitle: 'Manage, retarget, and analyze every dynamic QR.', emoji: '🚀' },
-    { id: 'static', label: 'Static Studio', subtitle: 'Create branded static codes with gradients and frames.', emoji: '🎨' },
-    { id: 'advanced', label: 'Advanced Builder', subtitle: 'Layer rules, geo targeting, and smart redirects.', emoji: '🧠' },
-    { id: 'templates', label: 'Template Gallery', subtitle: 'Launch fast with prebuilt QR destinations.', emoji: '📚' },
-    { id: 'terms', label: 'Terms', subtitle: 'Review usage guidelines.', emoji: '📜' },
-    { id: 'privacy', label: 'Privacy', subtitle: 'Understand how we protect data.', emoji: '🔐' }
+    { id: 'static', label: 'Static Studio', subtitle: 'Create branded static codes with gradients and frames.', emoji: '🎨' }
   ];
 
   return (
-    <div className="dashboard-shell">
-      <header className="dashboard-hero glass">
-        <div>
-          <span className="eyebrow">Welcome back</span>
-          <h1>Hi, {user.email.split('@')[0] || 'there'}!</h1>
-          <p>Your workspace tracks every scan and keeps QR edits a click away.</p>
-        </div>
-        <div className="hero-cta">
-          {!user.is_pro && (
-            <button className="btn-primary" onClick={upgradeWithStripe}>
-              Upgrade to Pro
+    <>
+      <div className="dashboard-shell">
+        <header className="dashboard-hero glass">
+          <div>
+            <span className="eyebrow">Welcome back</span>
+            <h1>Hi, {user.email.split('@')[0] || 'there'}!</h1>
+            <p>Your workspace tracks every scan and keeps QR edits a click away.</p>
+          </div>
+          <div className="hero-cta">
+            {!user.is_pro && (
+              <button className="btn-primary" onClick={upgradeWithStripe}>
+                Upgrade to Pro
+              </button>
+            )}
+            <button className="btn-secondary ghost" onClick={logout}>Logout</button>
+            <div className="plan-pill">
+              {user.is_pro ? 'Pro Plan active' : `Free Plan · ${user.trial_days_left} days left`}
+            </div>
+          </div>
+        </header>
+
+        <nav className="dashboard-nav">
+          {nav.map(item => (
+            <button
+              key={item.id}
+              className={view===item.id ? 'nav-card active' : 'nav-card'}
+              onClick={()=>setView(item.id)}
+            >
+              <div className="nav-icon">{item.emoji}</div>
+              <div>
+                <div className="nav-label">{item.label}</div>
+                <div className="nav-sub">{item.subtitle}</div>
+              </div>
             </button>
-          )}
-          <button className="btn-secondary ghost" onClick={logout}>Logout</button>
-          <div className="plan-pill">
-            {user.is_pro ? 'Pro Plan active' : `Free Plan · ${user.trial_days_left} days left`}
+          ))}
+        </nav>
+
+        <main className="dashboard-content">
+          {view==='dynamic' && (<section className="panel-section fade-up"><h2>Dynamic QR Dashboard</h2><p className="section-sub">Launch new campaigns, update destinations, and monitor engagement.</p><DynamicDashboard user={user}/></section>)}
+          {view==='static' && (<section className="panel-section fade-up"><h2>Static QR Studio</h2><p className="section-sub">Design premium static QR codes with gradients, frames, and logos.</p><StaticDesigner isPro={user.is_pro}/></section>)}
+        </main>
+        <SiteFooter onShowTerms={()=>setInfoModal('terms')} onShowPrivacy={()=>setInfoModal('privacy')} />
+      </div>
+      {infoModal && (
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal-card">
+            <button className="modal-close" onClick={()=>setInfoModal(null)} aria-label="Close">&times;</button>
+            {infoModal==='terms' ? <Terms /> : <Privacy />}
           </div>
         </div>
-      </header>
-
-      <nav className="dashboard-nav">
-        {nav.map(item => (
-          <button
-            key={item.id}
-            className={view===item.id ? 'nav-card active' : 'nav-card'}
-            onClick={()=>setView(item.id)}
-          >
-            <div className="nav-icon">{item.emoji}</div>
-            <div>
-              <div className="nav-label">{item.label}</div>
-              <div className="nav-sub">{item.subtitle}</div>
-            </div>
-          </button>
-        ))}
-      </nav>
-
-      <main className="dashboard-content">
-        {view==='dynamic' && (<section className="panel-section fade-up"><h2>Dynamic QR Dashboard</h2><p className="section-sub">Launch new campaigns, update destinations, and monitor engagement.</p><DynamicDashboard user={user}/></section>)}
-        {view==='static' && (<section className="panel-section fade-up"><h2>Static QR Studio</h2><p className="section-sub">Design premium static QR codes with gradients, frames, and logos.</p><StaticDesigner isPro={user.is_pro}/></section>)}
-        {view==='advanced' && (<section className="panel-section fade-up"><h2>Advanced QR Builder</h2><p className="section-sub">Automate redirects based on rules, time, or audience.</p><AdvancedQRBuilder user={user}/></section>)}
-        {view==='templates' && (<section className="panel-section fade-up"><h2>Templates Library</h2><p className="section-sub">Kickstart campaigns with pre-built QR destination templates.</p><TemplatesGallery /></section>)}
-        {view==='terms' && (<section className="panel-section fade-up"><Terms /></section>)}
-        {view==='privacy' && (<section className="panel-section fade-up"><Privacy /></section>)}
-      </main>
-    </div>
+      )}
+    </>
   );
 }

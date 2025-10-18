@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { renderStyledQR } from '../lib/styledQr';
+import { api } from '../api';
 import TemplatePreview from './TemplatePreview.jsx';
 import {
   TEMPLATES,
@@ -47,7 +48,9 @@ export default function StaticDesigner({ isPro }) {
   const [style, setStyle] = useState({ ...STYLE_DEFAULTS });
   const [logo, setLogo] = useState(null);
   const [logoSize, setLogoSize] = useState(0.22);
+  const [designName, setDesignName] = useState('My QR design');
   const [renderInfo, setRenderInfo] = useState({ width: STYLE_DEFAULTS.size, height: STYLE_DEFAULTS.size });
+  const [previewTab, setPreviewTab] = useState('qr');
   const canvasRef = useRef(null);
   const [savedDesigns, setSavedDesigns] = useState([]);
   const [toast, setToast] = useState('');
@@ -55,7 +58,10 @@ export default function StaticDesigner({ isPro }) {
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem(SAVED_KEY) || '[]');
-      if (Array.isArray(stored)) setSavedDesigns(stored);
+      if (Array.isArray(stored)) setSavedDesigns(stored.map(item => ({
+        ...item,
+        name: item.name || 'Saved QR'
+      })));
     } catch {
       setSavedDesigns([]);
     }
@@ -117,6 +123,30 @@ export default function StaticDesigner({ isPro }) {
     a.click();
   };
 
+  const downloadSvg = async () => {
+    const encoded = buildPayload(tpl, values);
+    try {
+      const data = await api('/qr/instant-svg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: encoded, size: style.size, foreground: style.foreground, background: style.background })
+      });
+      if (data?.svg) {
+        const blob = new Blob([data.svg], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'static_qr.svg';
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        alert(data?.error || 'Could not export SVG.');
+      }
+    } catch (e) {
+      alert('Could not export SVG right now.');
+    }
+  };
+
   const saveDesign = () => {
     const design = {
       id: Date.now().toString(36),
@@ -168,26 +198,30 @@ export default function StaticDesigner({ isPro }) {
         ))}
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start', marginBottom: 16 }}>
-        <div style={{ flex: '1 1 320px', minWidth: 260 }}>
+      <div className="designer-layout">
+        <div className="designer-settings">
           <TemplateDataForm type={tpl} values={values} onChange={onValueChange} />
-        </div>
-        <TemplatePreview type={tpl} values={values} />
-      </div>
 
-      <div className="row wrap" style={{ gap: 12 }}>
-        <label className="small" style={{ display: 'flex', flexDirection: 'column' }}>Size
-          <input type="range" min="240" max="720" value={style.size} onChange={e => onStyleChange('size', +e.target.value)} />
-        </label>
-        <label className="small" style={{ display: 'flex', flexDirection: 'column' }}>Background
-          <input type="color" value={style.background} onChange={e => onStyleChange('background', e.target.value)} />
-        </label>
-        <button onClick={() => download('png')}>Download PNG</button>
-        <button onClick={() => download('jpeg')}>Download JPG</button>
-        <button onClick={saveDesign}>Save design</button>
-      </div>
+          <div className="row wrap" style={{ gap: 12 }}>
+            <label className="small" style={{ display: 'flex', flexDirection: 'column' }}>Design title
+              <input value={designName} onChange={e => setDesignName(e.target.value)} placeholder="April campaign QR" />
+            </label>
+            <label className="small" style={{ display: 'flex', flexDirection: 'column' }}>Size
+              <input type="range" min="240" max="720" value={style.size} onChange={e => onStyleChange('size', +e.target.value)} />
+            </label>
+            <label className="small" style={{ display: 'flex', flexDirection: 'column' }}>Background
+              <input type="color" value={style.background} onChange={e => onStyleChange('background', e.target.value)} />
+            </label>
+          </div>
 
-      <div>
+          <div className="row wrap" style={{ gap: 12 }}>
+            <button onClick={() => download('png')}>Download PNG</button>
+            <button onClick={() => download('jpeg')}>Download JPG</button>
+            <button onClick={downloadSvg}>Download SVG</button>
+            <button onClick={saveDesign}>Save design</button>
+          </div>
+
+          <div>
         <div className="small" style={{ fontWeight: 600, marginTop: 16 }}>Colors</div>
         <div className="row wrap" style={{ gap: 8, marginTop: 6 }}>
           <button className={style.colorMode === 'solid' ? 'pill active' : 'pill'} onClick={() => onStyleChange('colorMode', 'solid')}>Solid</button>
@@ -251,31 +285,31 @@ export default function StaticDesigner({ isPro }) {
         )}
       </div>
 
-      <div className="small" style={{ color: '#4B5563', marginTop: 12 }}>
-        Export size: {Math.round(renderInfo.width)} × {Math.round(renderInfo.height)} px
       </div>
-
-      <div style={{ marginTop: 10, display: 'flex', justifyContent: 'center' }}>
-        <canvas ref={canvasRef} className="qr" style={{ maxWidth: '100%', height: 'auto' }} />
+        <div className="designer-preview">
+          <div className="preview-tabs">
+            <button type="button" className={previewTab==='qr' ? 'pill active' : 'pill'} onClick={()=>setPreviewTab('qr')}>QR Preview</button>
+            <button type="button" className={previewTab==='info' ? 'pill active' : 'pill'} onClick={()=>setPreviewTab('info')}>Template info</button>
+          </div>
+          {previewTab==='qr' ? (
+            <canvas ref={canvasRef} className="qr" style={{ maxWidth: '100%', height: 'auto' }} />
+          ) : (
+            <TemplatePreview type={tpl} values={values} />
+          )}
+          <div className="small" style={{ color: '#4B5563' }}>Export size: {Math.round(renderInfo.width)} × {Math.round(renderInfo.height)} px</div>
+        </div>
       </div>
 
       {savedDesigns.length > 0 && (
-        <div style={{ marginTop: 24 }}>
+        <div className="saved-section">
           <h3>Saved designs</h3>
-          <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+          <div className="saved-grid">
             {savedDesigns.map(design => (
-              <div key={design.id} style={{
-                borderRadius: 16,
-                border: '1px solid rgba(15,23,42,0.08)',
-                background: '#ffffff',
-                padding: 16,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 12
-              }}>
-                <TemplatePreview type={design.template} values={design.values} />
-                <div className="small" style={{ color: '#94a3b8' }}>{formatRelative(design.createdAt)}</div>
-                {design.hasLogo && <div className="small" style={{ color: '#f97316' }}>Logo not stored. Re-upload after loading.</div>}
+              <div key={design.id} className="saved-card">
+                <h4>{design.name || 'Saved QR'}</h4>
+                <SavedQRThumb design={design} />
+                <div className="saved-meta">{formatRelative(design.createdAt)}</div>
+                {design.hasLogo && <div className="saved-meta" style={{ color: '#f97316' }}>Logo not stored. Re-upload after loading.</div>}
                 <div className="row wrap" style={{ gap: 8 }}>
                   <button onClick={() => applyDesign(design)}>Load</button>
                   <button onClick={() => deleteDesign(design.id)} style={{ background: '#fee2e2', color: '#b91c1c' }}>Delete</button>
@@ -287,4 +321,36 @@ export default function StaticDesigner({ isPro }) {
       )}
     </section>
   );
+}
+
+function SavedQRThumb({ design }) {
+  const [dataUrl, setDataUrl] = React.useState('');
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const canvas = document.createElement('canvas');
+      await renderStyledQR(canvas, buildPayload(design.template, design.values), {
+        size: 220,
+        background: design.style.background || STYLE_DEFAULTS.background,
+        colorMode: design.style.colorMode || STYLE_DEFAULTS.colorMode,
+        foreground: design.style.foreground || STYLE_DEFAULTS.foreground,
+        foregroundSecondary: design.style.foregroundSecondary || STYLE_DEFAULTS.foregroundSecondary,
+        gradientAngle: design.style.gradientAngle ?? STYLE_DEFAULTS.gradientAngle,
+        frameStyle: design.style.frameStyle || STYLE_DEFAULTS.frameStyle,
+        frameColor: design.style.frameColor || STYLE_DEFAULTS.frameColor,
+        frameText: design.style.frameText || STYLE_DEFAULTS.frameText,
+        frameTextColor: design.style.frameTextColor || STYLE_DEFAULTS.frameTextColor,
+        logoDataUrl: null,
+        logoSizeRatio: design.style.logoSizeRatio || 0.22,
+        allowLogo: false
+      });
+      if (!cancelled) {
+        setDataUrl(canvas.toDataURL('image/png'));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [design]);
+
+  if (!dataUrl) return <div className="saved-thumb" />;
+  return <img src={dataUrl} alt={design.name || 'QR preview'} className="saved-thumb" />;
 }
