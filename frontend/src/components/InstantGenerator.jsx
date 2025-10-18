@@ -102,7 +102,7 @@ export default function InstantGenerator({ isLoggedIn, onRequestAuth, showHeadin
 
   return (
     <div className="instant-generator fade-up">
-      <div className="instant-shell glass">
+      <div>
         {showHeading && (
           <div className="instant-header">
             <span className="eyebrow">Instant Generator</span>
