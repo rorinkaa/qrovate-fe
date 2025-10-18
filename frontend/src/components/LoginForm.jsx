@@ -9,8 +9,13 @@ export default function LoginForm({ onLogin }){
   async function submit(e){
     e.preventDefault(); setMsg('');
     try{
-      const data = await api('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
-      onLogin(data.user);
+      const data = await api('/auth/login',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({email,password})
+      });
+      const payload = data?.token ? { ...data.user, token: data.token } : data.user;
+      onLogin(payload);
     }catch(err){ setMsg(err.message); }
   }
 

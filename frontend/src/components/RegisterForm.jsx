@@ -9,8 +9,13 @@ export default function RegisterForm({ onRegister }){
   async function submit(e){
     e.preventDefault(); setMsg('');
     try{
-      const data = await api('/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
-      onRegister(data.user);
+      const data = await api('/auth/register',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({email,password})
+      });
+      const payload = data?.token ? { ...data.user, token: data.token } : data.user;
+      onRegister(payload);
     }catch(err){ setMsg(err.message); }
   }
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import qrLibUrl from "../lib/qrcode-min.js?url";
 
 /**
  * Requires ./lib/qrcode-min.js (already in project).
@@ -7,7 +8,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 function ensureQRLib(){
   if(typeof window !== 'undefined' && !window.QRCode){
     const s = document.createElement('script');
-    s.src = '/src/lib/qrcode-min.js';
+    s.src = qrLibUrl;
     document.head.appendChild(s);
   }
 }
