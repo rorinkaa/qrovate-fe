@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import InstantGenerator from './InstantGenerator.jsx';
+import HeroIllustration from './HeroIllustration';
 
 const FEATURE_CARDS = [
   {

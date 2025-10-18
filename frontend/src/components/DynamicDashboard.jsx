@@ -111,6 +111,7 @@ export default function DynamicDashboard({ user }) {
   const [tpl, setTpl] = useState('URL');
   const [values, setValues] = useState({ ...TEMPLATE_DEFAULTS.URL });
   const [style, setStyle] = useState({ ...STYLE_DEFAULTS });
+  const [qrName, setQrName] = useState('New dynamic QR');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
@@ -133,8 +134,10 @@ export default function DynamicDashboard({ user }) {
         setItems(normalized);
         if (normalized.length) {
           setSel(normalized[0]);
+          setQrName(normalized[0].name || 'Untitled QR');
         } else {
           setSel(null);
+          setQrName('New dynamic QR');
         }
         setErr('');
       } catch (e) {
@@ -149,12 +152,14 @@ export default function DynamicDashboard({ user }) {
       setTpl('URL');
       setValues({ ...TEMPLATE_DEFAULTS.URL });
       setStyle({ ...STYLE_DEFAULTS });
+      setQrName('New dynamic QR');
       setHistory([]);
       setHistoryStatus('idle');
       setHistoryError('');
       return;
     }
     setStyle(prev => ({ ...prev, ...(sel.style || {}) }));
+    setQrName(sel.name || 'Untitled QR');
     const target = sel.target || '';
     if (target && !target.includes('/payload.html')) {
       setTpl('URL');
@@ -213,6 +218,8 @@ export default function DynamicDashboard({ user }) {
     setStyle(prev => ({ ...prev, [key]: value }));
   };
 
+  const onNameChange = (value) => setQrName(value);
+
   const onLogoUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -253,6 +260,9 @@ export default function DynamicDashboard({ user }) {
   const updateListItem = (updated) => {
     setItems(prev => prev.map(i => i.id === updated.id ? { ...i, ...updated } : i));
     setSel(prev => prev && prev.id === updated.id ? { ...prev, ...updated } : prev);
+    if (updated?.name) {
+      setQrName(updated.name);
+    }
   };
 
   const createDynamic = async () => {
@@ -404,7 +414,10 @@ export default function DynamicDashboard({ user }) {
             <div
               key={it.id}
               className={sel?.id === it.id ? 'library-card active' : 'library-card'}
-              onClick={() => setSel(it)}
+              onClick={() => {
+                setSel(it);
+                setQrName(it.name || 'Untitled QR');
+              }}
             >
               <span>{it.name || it.id.slice(0, 8)}</span>
               <a href={`${API}/qr/${it.id}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>Open ↗</a>
