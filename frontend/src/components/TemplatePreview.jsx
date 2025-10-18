@@ -1,44 +1,48 @@
 import React from 'react';
 
-const paneStyle = {
+const paneBase = {
   flex: '1 1 320px',
   minWidth: 260,
-  background: '#ffffff',
-  border: '1px solid rgba(15,23,42,0.06)',
-  borderRadius: 20,
-  padding: 20,
-  boxShadow: '0 20px 60px -28px rgba(15,23,42,0.22)',
+  borderRadius: 24,
+  padding: 24,
   display: 'flex',
   flexDirection: 'column',
-  gap: 12
+  gap: 16
 };
 
 const headerStyle = {
-  fontSize: 12,
+  fontSize: 11,
   textTransform: 'uppercase',
-  letterSpacing: '0.1em',
-  fontWeight: 600,
-  color: '#475569'
+  letterSpacing: '0.18em',
+  fontWeight: 600
 };
 
 const titleStyle = {
-  fontSize: 20,
-  fontWeight: 600,
-  color: '#0f172a',
-  lineHeight: 1.2
+  fontSize: 22,
+  fontWeight: 700,
+  lineHeight: 1.25
 };
 
 const subtitleStyle = {
-  fontSize: 14,
-  color: '#475569',
-  lineHeight: 1.5
+  fontSize: 15,
+  lineHeight: 1.6
 };
 
 const footerStyle = {
   marginTop: 'auto',
-  fontSize: 13,
-  color: '#64748b'
+  fontSize: 13
 };
+
+function withAlpha(hex = '#000000', alpha = 0.15) {
+  const sanitized = hex.replace('#', '');
+  const normalized = sanitized.length === 3 ? sanitized.split('').map(ch => ch + ch).join('') : sanitized;
+  if (normalized.length !== 6) return `rgba(0,0,0,${alpha})`;
+  const bigint = parseInt(normalized, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 function pickBrand(url) {
   if (!url) return null;
@@ -62,60 +66,11 @@ function cleanHost(url) {
   }
 }
 
-function firstLine(value, fallback = '') {
-  if (!value) return fallback;
-  return value.split(/\n|\r/).filter(Boolean)[0] || fallback;
-}
-
 function formatDateTime(value) {
   if (!value) return 'Not scheduled yet';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-}
-
-function Money({ amount, currency = 'USD' }) {
-  const val = Number(amount);
-  if (!Number.isFinite(val)) return `${amount || '0'} ${currency}`;
-  return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(val);
-}
-
-function renderTextContent(content) {
-  if (content == null) return null;
-  if (typeof content === 'string') {
-    return content.split('\n').map((line, idx) => (
-      <div key={idx} style={idx > 0 ? { marginTop: 4 } : undefined}>{line}</div>
-    ));
-  }
-  return content;
-}
-
-function PreviewCard({ eyebrow, title, subtitle, body, footer, accent, illustration, highlight }) {
-  return (
-    <div style={{ ...paneStyle, borderColor: accent ? accent + '33' : paneStyle.border, boxShadow: accent ? `0 20px 60px -28px ${accent}66` : paneStyle.boxShadow }}>
-      {eyebrow && <div style={{ ...headerStyle, color: accent || headerStyle.color }}>{eyebrow}</div>}
-      <div style={{ display: 'flex', gap: 12, alignItems: illustration ? 'center' : 'flex-start' }}>
-        {illustration}
-        <div style={{ flex: 1 }}>
-          {title && <div style={{ ...titleStyle, color: accent ? '#0b1120' : titleStyle.color }}>{title}</div>}
-          {subtitle && <div style={subtitleStyle}>{subtitle}</div>}
-          {highlight && (
-            <div style={{
-              marginTop: 8,
-              padding: '8px 12px',
-              borderRadius: 12,
-              background: accent ? accent + '1a' : '#f1f5f9',
-              color: accent ? accent : '#0f172a',
-              fontWeight: 600,
-              fontSize: 13
-            }}>{highlight}</div>
-          )}
-        </div>
-      </div>
-      {body && <div style={{ ...subtitleStyle, color: '#1f2937' }}>{renderTextContent(body)}</div>}
-      {footer && <div style={footerStyle}>{footer}</div>}
-    </div>
-  );
 }
 
 function ChatBubble({ author, text, tint }) {
@@ -136,318 +91,334 @@ function ChatBubble({ author, text, tint }) {
   );
 }
 
-function renderUrlPreview(values) {
-  const url = values.url || '';
-  const brand = pickBrand(url);
-  const host = cleanHost(url);
-  return (
-    <PreviewCard
-      eyebrow={brand?.label || 'Website'}
-      title={brand ? `${brand.icon} ${host}` : host}
-      subtitle={brand ? 'Send visitors directly to your social page.' : 'Your link opens instantly when scanned.'}
-      body={url ? url : 'Add your URL to see it here.'}
-      footer="Tip: add UTM parameters to track campaigns."
-      accent={brand?.accent || '#2563eb'}
-      illustration={
-        <div style={{
-          width: 64,
-          height: 64,
-          borderRadius: 18,
-          background: brand ? brand.accent + '1a' : '#dbeafe',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 28
-        }}>
-          {brand?.icon || '🌐'}
-        </div>
-      }
-    />
-  );
-}
-
-function renderTextPreview(values) {
-  const text = values.text || 'Hello there! 👋';
-  return (
-    <PreviewCard
-      eyebrow="Text snippet"
-      title="Instant message"
-      body={`The camera will show this text:\n“${text.slice(0, 120)}${text.length > 120 ? '…' : ''}”`}
-      footer="Great for coupons, promo codes, and short announcements."
-      accent="#7c3aed"
-    />
-  );
-}
-
-function renderPhonePreview(values) {
-  const phone = values.phone || '+1 555 123 4567';
-  return (
-    <PreviewCard
-      eyebrow="Phone call"
-      title="Tap to call"
-      subtitle="Opens the dialer with this number"
-      highlight={phone}
-      footer="Perfect for support lines or booking numbers."
-      accent="#ef4444"
-      illustration={<div style={{ fontSize: 34 }}>📞</div>}
-    />
-  );
-}
-
-function renderSMSPreview(values) {
-  const to = values.to || '+1 555 123 4567';
-  const body = values.body || 'Hello! I found you via the QR code.';
-  return (
-    <PreviewCard
-      eyebrow="SMS conversation"
-      title="Auto-filled message"
-      accent="#00a884"
-      body={
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <ChatBubble author="You" text={`To: ${to}`} tint="#dcfce7" />
-          <ChatBubble author="Draft" text={body} tint="#e0f2fe" />
-        </div>
-      }
-      footer="Users can hit send immediately."
-    />
-  );
-}
-
-function renderEmailPreview(values) {
-  const to = values.to || 'hello@example.com';
-  const subject = values.subject || 'Quick hello from your QR visitor';
-  const body = values.body || 'Hi there! I scanned your QR code and would love to connect.';
-  return (
-    <PreviewCard
-      eyebrow="Email draft"
-      title={subject}
-      subtitle={`To: ${to}`}
-      body={body.length > 240 ? body.slice(0, 240) + '…' : body}
-      footer="Opens the visitor’s default mail app with these fields filled in."
-      accent="#2563eb"
-      illustration={<div style={{ fontSize: 34 }}>✉️</div>}
-    />
-  );
-}
-
-function renderWhatsAppPreview(values) {
-  const phone = values.phone || '+1 555 123 4567';
-  const text = values.text || 'Hey! 👋 Thanks for scanning our QR — can I help you with anything?';
-  return (
-    <PreviewCard
-      eyebrow="WhatsApp chat"
-      title="Start a conversation"
-      subtitle={`To: ${phone}`}
-      body={<ChatBubble author="Message" text={text} tint="#dcfce7" />}
-      accent="#25d366"
-      footer="Opens WhatsApp with chat ready to send."
-    />
-  );
-}
-
-function renderFacetimePreview(values) {
-  const target = values.target || 'user@example.com';
-  return (
-    <PreviewCard
-      eyebrow="FaceTime call"
-      title="Start a FaceTime session"
-      subtitle={`Target: ${target}`}
-      footer="Opens FaceTime with this address or number."
-      accent="#38bdf8"
-      illustration={<div style={{ fontSize: 34 }}>🎥</div>}
-    />
-  );
-}
-
-function renderWifiPreview(values) {
-  const ssid = values.ssid || 'MyGuestWiFi';
-  const auth = values.auth || 'WPA';
-  const password = values.password || 'super-secret';
-  return (
-    <PreviewCard
-      eyebrow="Wi‑Fi login"
-      title={ssid}
-      subtitle={`Security: ${auth}`}
-      highlight={`Password: ${password || '—'}`}
-      footer="Scanning connects guests without typing credentials."
-      accent="#0ea5e9"
-      illustration={<div style={{ fontSize: 34 }}>📶</div>}
-    />
-  );
-}
-
-function renderEventPreview(values) {
-  const summary = values.summary || 'Product Launch Event';
-  const start = formatDateTime(values.start);
-  const location = values.location || 'Main HQ Auditorium';
-  return (
-    <PreviewCard
-      eyebrow="Calendar event"
-      title={summary}
-      subtitle={start}
-      body={location}
-      footer="Adds the event to the attendee’s calendar app."
-      accent="#f97316"
-      illustration={<div style={{ fontSize: 34 }}>📅</div>}
-    />
-  );
-}
-
-function renderVcardPreview(values) {
-  const name = [values.first, values.last].filter(Boolean).join(' ') || 'Alex Morgan';
-  const title = values.title || values.org || 'Brand Ambassador • QRovate';
-  const phone = values.phone || '+1 555 123 4567';
-  const email = values.email || 'alex@example.com';
-  return (
-    <PreviewCard
-      eyebrow="Digital business card"
-      title={name}
-      subtitle={title}
-      body={`📞 ${phone}\n✉️ ${email}`}
-      footer="Creates or updates a contact in their address book."
-      accent="#8b5cf6"
-      illustration={<div style={{ fontSize: 34 }}>🪪</div>}
-    />
-  );
-}
-
-function renderCryptoPreview(values) {
-  const symbol = (values.symbol || 'BTC').toUpperCase();
-  const address = values.address || 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7k5x0f3';
-  const amount = values.amount;
-  return (
-    <PreviewCard
-      eyebrow="Crypto payment"
-      title={`${symbol} Payment`}
-      subtitle={amount ? `Requesting ${amount} ${symbol}` : 'Ready to receive funds'}
-      body={`Wallet: ${address.slice(0, 16)}…${address.slice(-6)}`}
-      footer="Scanner opens the sender’s wallet with these details."
-      accent="#f59e0b"
-      illustration={<div style={{ fontSize: 34 }}>🪙</div>}
-    />
-  );
-}
-
-function renderPayPalPreview(values) {
-  const username = values.username || 'yourbusiness';
-  const amount = values.amount;
-  return (
-    <PreviewCard
-      eyebrow="PayPal.me"
-      title={`Pay @${username}`}
-      subtitle={amount ? `Amount requested: ${Money({ amount })}` : 'No amount requested — payer chooses'}
-      footer="Opens PayPal with your profile pre-selected."
-      accent="#0070ba"
-      illustration={<div style={{ fontSize: 34 }}>💸</div>}
-    />
-  );
-}
-
-function renderUPIPreview(values) {
-  const vpa = values.vpa || 'merchant@upi';
-  const name = values.name || 'Your business';
-  const amount = values.amount;
-  return (
-    <PreviewCard
-      eyebrow="UPI Payment"
-      title={name}
-      subtitle={`VPA: ${vpa}`}
-      highlight={amount ? `Collecting ${amount} INR` : 'Amount entered by payer'}
-      footer="Compatible with Google Pay, PhonePe, Paytm, and more."
-      accent="#22c55e"
-      illustration={<div style={{ fontSize: 34 }}>🇮🇳</div>}
-    />
-  );
-}
-
-function renderLocationPreview(values) {
-  if (values.query) {
-    return (
-      <PreviewCard
-        eyebrow="Maps search"
-        title={firstLine(values.query, 'Pinned location')}
-        subtitle="Opens in Maps with this search query"
-        footer="Great for venues without an exact address."
-        accent="#ef4444"
-        illustration={<div style={{ fontSize: 34 }}>📍</div>}
-      />
-    );
+function describeTemplate(type, values) {
+  switch ((type || 'URL').toUpperCase()) {
+    case 'TEXT': {
+      const text = values.text || 'Hello there! 👋';
+      return {
+        eyebrow: 'Text snippet',
+        title: 'Instant message',
+        subtitle: 'Shown immediately after scanning.',
+        body: text,
+        inlineSummary: text.slice(0, 90),
+        tip: 'Great for coupons, promo codes, and short announcements.',
+        accent: '#7c3aed',
+        icon: '💬'
+      };
+    }
+    case 'PHONE': {
+      const phone = values.phone || '+1 555 123 4567';
+      return {
+        eyebrow: 'Phone call',
+        title: 'Tap to call',
+        subtitle: 'Opens the dialer with this number.',
+        highlight: phone,
+        inlineSummary: `Dial ${phone}`,
+        tip: 'Great for support lines or booking numbers.',
+        accent: '#ef4444',
+        icon: '📞'
+      };
+    }
+    case 'SMS': {
+      const to = values.to || '+1 555 123 4567';
+      const body = values.body || 'Hello! I found you via the QR code.';
+      return {
+        eyebrow: 'SMS conversation',
+        title: 'Auto-filled message',
+        body: (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <ChatBubble author="You" text={`To: ${to}`} tint="#dcfce7" />
+            <ChatBubble author="Draft" text={body} tint="#e0f2fe" />
+          </div>
+        ),
+        inlineSummary: `Text ${to}`,
+        tip: 'Users can hit send immediately.',
+        accent: '#00a884',
+        icon: '💬'
+      };
+    }
+    case 'EMAIL': {
+      const to = values.to || 'hello@example.com';
+      const subject = values.subject || 'Quick hello from your QR visitor';
+      const body = values.body || 'Hi there! I scanned your QR code and would love to connect.';
+      return {
+        eyebrow: 'Email draft',
+        title: subject,
+        subtitle: `To: ${to}`,
+        body: body.length > 240 ? `${body.slice(0, 240)}…` : body,
+        inlineSummary: `Email ${to}`,
+        tip: 'Opens the visitor’s default mail app with these fields filled in.',
+        accent: '#2563eb',
+        icon: '✉️'
+      };
+    }
+    case 'WHATSAPP': {
+      const phone = values.phone || '+1 555 123 4567';
+      const text = values.text || 'Hey! 👋 Thanks for scanning our QR — can I help you with anything?';
+      return {
+        eyebrow: 'WhatsApp chat',
+        title: 'Start a conversation',
+        subtitle: `To: ${phone}`,
+        body: <ChatBubble author="Message" text={text} tint="#dcfce7" />,
+        inlineSummary: `WhatsApp ${phone}`,
+        tip: 'Opens WhatsApp with chat ready to send.',
+        accent: '#25d366',
+        icon: '🟢'
+      };
+    }
+    case 'FACETIME': {
+      const target = values.target || 'user@example.com';
+      return {
+        eyebrow: 'FaceTime call',
+        title: 'Start a FaceTime session',
+        subtitle: `Target: ${target}`,
+        inlineSummary: `FaceTime ${target}`,
+        tip: 'Opens FaceTime with this address or number.',
+        accent: '#38bdf8',
+        icon: '🎥'
+      };
+    }
+    case 'LOCATION': {
+      const location = values.query || `${values.lat || ''}${values.lat && values.lng ? ', ' : ''}${values.lng || ''}` || 'Add a map target.';
+      return {
+        eyebrow: 'Maps location',
+        title: 'Open directions',
+        subtitle: location,
+        inlineSummary: location,
+        tip: 'Launches maps with the destination pinned.',
+        accent: '#0ea5e9',
+        icon: '📍'
+      };
+    }
+    case 'WIFI': {
+      const ssid = values.ssid || 'MyGuestWiFi';
+      const auth = values.auth || 'WPA';
+      const password = values.password || 'super-secret';
+      return {
+        eyebrow: 'Wi‑Fi login',
+        title: ssid,
+        subtitle: `Security: ${auth}`,
+        highlight: `Password: ${password || '—'}`,
+        inlineSummary: `Wi‑Fi SSID “${ssid}”`,
+        tip: 'Scanning connects guests without typing credentials.',
+        accent: '#0ea5e9',
+        icon: '📶'
+      };
+    }
+    case 'EVENT': {
+      const summary = values.summary || 'Product Launch Event';
+      const start = formatDateTime(values.start);
+      const location = values.location || 'Main HQ Auditorium';
+      return {
+        eyebrow: 'Calendar event',
+        title: summary,
+        subtitle: start,
+        body: location,
+        inlineSummary: `${summary} • ${start}`,
+        tip: 'Adds the event to the attendee’s calendar app.',
+        accent: '#f97316',
+        icon: '📅'
+      };
+    }
+    case 'VCARD': {
+      const name = [values.first, values.last].filter(Boolean).join(' ') || 'Alex Morgan';
+      const title = values.title || values.org || 'Brand Ambassador • QRovate';
+      const phone = values.phone || '+1 555 123 4567';
+      const email = values.email || 'alex@example.com';
+      return {
+        eyebrow: 'Digital business card',
+        title: name,
+        subtitle: title,
+        body: `📞 ${phone}\n✉️ ${email}`,
+        inlineSummary: `${name} • ${phone}`,
+        tip: 'Creates or updates a contact in their address book.',
+        accent: '#8b5cf6',
+        icon: '🪪'
+      };
+    }
+    case 'CRYPTO': {
+      const symbol = (values.symbol || 'BTC').toUpperCase();
+      const address = values.address || 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7k5x0f3';
+      const amount = values.amount;
+      return {
+        eyebrow: `${symbol} payment`,
+        title: address.slice(0, 12) + '…',
+        subtitle: address,
+        highlight: amount ? `Amount requested: ${amount}` : undefined,
+        inlineSummary: `${symbol} wallet`,
+        tip: 'Opens the wallet app ready to send funds.',
+        accent: '#fbbf24',
+        icon: '₿'
+      };
+    }
+    case 'PAYPAL': {
+      const username = values.username || 'mybusiness';
+      const amount = values.amount;
+      return {
+        eyebrow: 'PayPal checkout',
+        title: `paypal.me/${username}`,
+        subtitle: 'Tap to complete payment securely.',
+        highlight: amount ? `Amount: ${amount}` : undefined,
+        inlineSummary: `PayPal • ${username}`,
+        tip: 'Perfect for donations or quick settlements.',
+        accent: '#1070d1',
+        icon: '💸'
+      };
+    }
+    case 'UPI PAYMENT': {
+      const vpa = values.vpa || 'merchant@upi';
+      const name = values.name || 'QRovate Store';
+      const amount = values.amount;
+      return {
+        eyebrow: 'UPI payment',
+        title: name,
+        subtitle: `VPA: ${vpa}`,
+        highlight: amount ? `Amount: ₹${amount}` : 'Amount entered on device',
+        inlineSummary: `UPI • ${vpa}`,
+        tip: 'Works with Google Pay, PhonePe, and other UPI apps.',
+        accent: '#0f766e',
+        icon: '🇮🇳'
+      };
+    }
+    case 'EPC PAYMENT': {
+      const name = values.name || 'ACME GmbH';
+      const iban = values.iban || 'DE02120300000000202051';
+      const amount = values.amount ? `€${values.amount}` : 'Amount entered by sender';
+      const remittance = values.remittance || 'Invoice 2024-04';
+      return {
+        eyebrow: 'SEPA transfer',
+        title: name,
+        subtitle: `IBAN: ${iban}`,
+        body: `Purpose: ${remittance}`,
+        highlight: amount,
+        inlineSummary: `${name} • IBAN ending ${iban.slice(-4)}`,
+        tip: 'Compatible with EU banking apps that support EPC QR.',
+        accent: '#2563eb',
+        icon: '🏦'
+      };
+    }
+    case 'PIX PAYMENT': {
+      const payload = values.payload || 'Add your PIX payload';
+      return {
+        eyebrow: 'PIX payment',
+        title: 'Brazil instant payment',
+        subtitle: 'Scan to open your banking app.',
+        body: payload.slice(0, 160),
+        inlineSummary: 'PIX payment request',
+        tip: 'Works with Brazilian PIX-compliant apps.',
+        accent: '#22d3ee',
+        icon: '💠'
+      };
+    }
+    default: {
+      const url = values.url || '';
+      const brand = pickBrand(url);
+      const host = cleanHost(url);
+      return {
+        eyebrow: brand?.label || 'Website',
+        title: brand ? `${brand.icon} ${host}` : host,
+        subtitle: brand ? 'Send visitors directly to your social page.' : 'Opens instantly when scanned.',
+        body: url || 'Add your URL to see it here.',
+        inlineSummary: url || 'Add a destination URL.',
+        tip: 'Tip: add UTM parameters to track campaigns.',
+        accent: brand?.accent || '#2563eb',
+        icon: brand?.icon || '🌐'
+      };
+    }
   }
-  const coords = values.lat && values.lng ? `${values.lat}, ${values.lng}` : '0,0';
-  return (
-    <PreviewCard
-      eyebrow="Pinned coordinates"
-      title={coords}
-      subtitle="Opens the map at these coordinates"
-      footer="Perfect for outdoor events or pop-up shops."
-      accent="#ef4444"
-      illustration={<div style={{ fontSize: 34 }}>🗺️</div>}
-    />
-  );
 }
 
-function renderEpcPreview(values) {
-  const name = values.name || 'ACME GmbH';
-  const iban = values.iban || 'DE89 3704 0044 0532 0130 00';
-  const amount = values.amount ? `${values.amount} EUR` : 'Amount optional';
+function PreviewCard({ descriptor }) {
+  const {
+    eyebrow,
+    title,
+    subtitle,
+    body,
+    highlight,
+    tip,
+    accent,
+    icon
+  } = descriptor;
+  const gradient = accent
+    ? `linear-gradient(135deg, ${withAlpha(accent, 0.34)}, ${withAlpha(accent, 0.18)})`
+    : `linear-gradient(135deg, rgba(15, 23, 42, 0.82), rgba(30, 64, 175, 0.66))`;
+  const borderColor = withAlpha(accent || '#1e3a8a', 0.34);
+  const accentText = '#f8fafc';
+
   return (
-    <PreviewCard
-      eyebrow="SEPA transfer"
-      title={name}
-      subtitle={`IBAN: ${iban}`}
-      highlight={amount}
-      footer="Customers can pay instantly with their banking app."
-      accent="#0ea5e9"
-      illustration={<div style={{ fontSize: 34 }}>🇪🇺</div>}
-    />
-  );
-}
-
-function renderPixPreview(values) {
-  const payload = values.payload || 'Ready to paste your PIX payload';
-  return (
-    <PreviewCard
-      eyebrow="PIX payment"
-      title="PIX QR"
-      body={payload.length > 180 ? payload.slice(0, 180) + '…' : payload}
-      footer="Compatible with all Brazilian banks that support PIX."
-      accent="#0ea5e9"
-      illustration={<div style={{ fontSize: 34 }}>🇧🇷</div>}
-    />
-  );
-}
-
-const RENDERERS = {
-  URL: renderUrlPreview,
-  TEXT: renderTextPreview,
-  Phone: renderPhonePreview,
-  SMS: renderSMSPreview,
-  Email: renderEmailPreview,
-  Whatsapp: renderWhatsAppPreview,
-  Facetime: renderFacetimePreview,
-  WiFi: renderWifiPreview,
-  Event: renderEventPreview,
-  Vcard: renderVcardPreview,
-  Location: renderLocationPreview,
-  Crypto: renderCryptoPreview,
-  PayPal: renderPayPalPreview,
-  'UPI Payment': renderUPIPreview,
-  'EPC Payment': renderEpcPreview,
-  'PIX Payment': renderPixPreview
-};
-
-export default function TemplatePreview({ type, values }) {
-  const renderer = RENDERERS[type];
-  if (!renderer) {
-    return (
-      <div style={paneStyle}>
-        <div style={headerStyle}>{type} preview</div>
-        <div style={subtitleStyle}>Preview coming soon for this template.</div>
-        <div style={footerStyle}>You can still configure the destination while we finish this design.</div>
+    <div style={{ ...paneBase, background: gradient, border: `1px solid ${borderColor}`, color: accentText }}>
+      {eyebrow && <div style={{ ...headerStyle, color: withAlpha('#ffffff', 0.82) }}>{eyebrow}</div>}
+      <div style={{ display: 'flex', gap: 14, alignItems: icon ? 'center' : 'flex-start' }}>
+        {icon && (
+          <div style={{
+            width: 64,
+            height: 64,
+            borderRadius: 20,
+            background: withAlpha('#ffffff', 0.18),
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 28
+          }}>
+            {icon}
+          </div>
+        )}
+        <div style={{ flex: 1 }}>
+          {title && <div style={{ ...titleStyle, color: '#f8fafc' }}>{title}</div>}
+          {subtitle && <div style={{ ...subtitleStyle, color: withAlpha('#f8fafc', 0.82) }}>{subtitle}</div>}
+          {highlight && (
+            <div style={{
+              marginTop: 10,
+              padding: '10px 14px',
+              borderRadius: 14,
+              background: withAlpha('#ffffff', 0.18),
+              color: '#f8fafc',
+              fontWeight: 600,
+              fontSize: 14
+            }}>{highlight}</div>
+          )}
+        </div>
       </div>
-    );
-  }
+      {body && (
+        <div style={{ ...subtitleStyle, color: withAlpha('#f8fafc', 0.85) }}>
+          {typeof body === 'string' ? body.split('\n').map((line, idx) => (
+            <div key={idx} style={idx ? { marginTop: 6 } : undefined}>{line}</div>
+          )) : body}
+        </div>
+      )}
+      {tip && <div style={{ ...footerStyle, color: withAlpha('#f8fafc', 0.7) }}>{tip}</div>}
+    </div>
+  );
+}
 
-  const content = renderer(values || {});
-  return content;
+function InlinePreview({ descriptor }) {
+  const {
+    eyebrow,
+    title,
+    subtitle,
+    highlight,
+    inlineSummary,
+    accent
+  } = descriptor;
+  return (
+    <div
+      className="inline-preview-card"
+      style={{
+        background: `linear-gradient(135deg, ${withAlpha(accent || '#2563eb', 0.12)}, ${withAlpha(accent || '#2563eb', 0.05)})`,
+        border: `1px solid ${withAlpha(accent || '#2563eb', 0.18)}`
+      }}
+    >
+      {eyebrow && <span className="inline-eyebrow">{eyebrow}</span>}
+      <div className="inline-title">{title || 'Ready to preview'}</div>
+      {subtitle && <div className="inline-subtitle">{subtitle}</div>}
+      {highlight && <div className="inline-highlight">{highlight}</div>}
+      <div className="inline-summary">{inlineSummary || ''}</div>
+    </div>
+  );
+}
+
+export default function TemplatePreview({ type, values, variant = 'card' }) {
+  const descriptor = describeTemplate(type, values);
+  if (variant === 'inline') return <InlinePreview descriptor={descriptor} />;
+  return <PreviewCard descriptor={descriptor} />;
 }

@@ -1,26 +1,49 @@
 // src/App.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import LoginForm from './components/LoginForm.jsx';
 import RegisterForm from './components/RegisterForm.jsx';
-import StaticDesigner from './components/StaticDesigner.jsx';
-import DynamicDashboard from './components/DynamicDashboard.jsx';
 import Terms from './components/Terms.jsx';
 import Privacy from './components/Privacy.jsx';
 import SiteFooter from './components/SiteFooter.jsx';
 import Homepage from './components/Homepage.jsx';
+import GlassCard from './components/ui/GlassCard.jsx';
+import DashboardSummary from './components/DashboardSummary.jsx';
+import BuilderFlow from './components/BuilderFlow.jsx';
+import MyQRCodes from './components/MyQRCodes.jsx';
 
 import { API, api } from './api.js';
+
+const initialView = typeof window !== 'undefined'
+  ? (localStorage.getItem('qr_last_view') === 'codes' ? 'codes' : 'summary')
+  : 'summary';
 
 export default function App(){
   const [user, setUser] = useState(null);
   const [mode, setMode] = useState('login');
-  const [view, setView] = useState('dynamic'); // start on Dynamic after login
+  const [view, setViewRaw] = useState(initialView);
+  const [lastStableView, setLastStableView] = useState(initialView);
   const [authOpen, setAuthOpen] = useState(false);
   const [infoModal, setInfoModal] = useState(null);
   const [authAlert, setAuthAlert] = useState(null);
   const [resetToken, setResetToken] = useState(null);
   const [dashboardAlert, setDashboardAlert] = useState(null);
   const [resendBusy, setResendBusy] = useState(false);
+  const [builderConfig, setBuilderConfig] = useState(null);
+  const [codesVersion, setCodesVersion] = useState(0);
+  const setView = useCallback((nextView) => {
+    setViewRaw(nextView);
+    if (nextView !== 'builder') {
+      setLastStableView(nextView);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('qr_last_view', nextView);
+      }
+    }
+  }, []);
+  const openBuilder = (config = { type: null, codeId: null }) => {
+    setBuilderConfig(config);
+    setDashboardAlert(null);
+    setView('builder');
+  };
 
   useEffect(()=>{
     const raw = localStorage.getItem('qr_user');
@@ -77,7 +100,7 @@ export default function App(){
       localStorage.setItem('token', normalized.token || normalized.jwt);
     }
     setUser(normalized);
-    setView('dynamic');
+    setView('summary');
     setAuthAlert(null);
     setResetToken(null);
     clearAuthParams();
@@ -89,9 +112,11 @@ export default function App(){
   function logout(){
     localStorage.removeItem('qr_user');
     localStorage.removeItem('token'); // NEW: clear token on logout
+    if (typeof window !== 'undefined') localStorage.removeItem('qr_last_view');
     setUser(null);
     setMode('login');
-    setView('dynamic');
+    setView('summary');
+    setLastStableView('summary');
     setAuthAlert(null);
     setResetToken(null);
     setDashboardAlert(null);
@@ -262,67 +287,108 @@ export default function App(){
   }
 
   const nav = [
-    { id: 'dynamic', label: 'Dynamic Dashboard', subtitle: 'Manage, retarget, and analyze every dynamic QR.', emoji: '🚀' },
-    { id: 'static', label: 'Static Studio', subtitle: 'Create branded static codes with gradients and frames.', emoji: '🎨' }
+    { id: 'summary', label: 'Dashboard', subtitle: 'Recent activity & quick actions', emoji: '📊' },
+    { id: 'codes', label: 'My QR codes', subtitle: 'Download, edit, and review stats', emoji: '🗂️' },
+    { id: 'builder', label: 'Create new code', subtitle: 'Start a guided flow', emoji: '✨' }
   ];
-
+  const verified = user.email_verified !== false;
+  const planLabel = user.is_pro ? 'Pro plan active' : `Free plan · ${user.trial_days_left} days left`;
   return (
     <>
-      <div className="dashboard-shell">
-        {dashboardAlert && (
-          <div className={`dashboard-alert ${dashboardAlert.type || 'info'}`}>
-            <span>{dashboardAlert.text}</span>
+      <div className="dashboard-layout">
+        <header className="dashboard-topbar">
+          <div className="brand">
+            <span>◎</span>
+            <div>Qrovate Workspace</div>
           </div>
-        )}
-        {user && user.email_verified === false && (
-          <div className="dashboard-alert warning">
-            <span>Verify your email to unlock analytics, scheduled redirects, and team features.</span>
-            <button onClick={resendVerificationFromDashboard} disabled={resendBusy}>
-              {resendBusy ? 'Sending…' : 'Resend verification email'}
-            </button>
-          </div>
-        )}
-        <header className="dashboard-hero glass">
-          <div>
-            <span className="eyebrow">Welcome back</span>
-            <h1>Hi, {user.email.split('@')[0] || 'there'}!</h1>
-            <p>Your workspace tracks every scan and keeps QR edits a click away.</p>
-          </div>
-          <div className="hero-cta">
-            {!user.is_pro && (
-              <button className="btn-primary" onClick={upgradeWithStripe}>
-                Upgrade to Pro
+          <div className="dashboard-topbar-actions">
+            {!verified && (
+              <button
+                type="button"
+                className="chip-action warning"
+                onClick={resendVerificationFromDashboard}
+                disabled={resendBusy}
+              >
+                {resendBusy ? 'Sending link…' : 'Verify email'}
               </button>
             )}
+            <span className={`dashboard-chip ${user.is_pro ? 'success' : ''}`}>
+              {planLabel}
+            </span>
+          <button
+            className="btn-primary"
+            onClick={()=>openBuilder({ type: 'dynamic-new', codeId: null })}
+          >
+              New QR code
+            </button>
             <button className="btn-secondary ghost" onClick={logout}>Logout</button>
-            <div className="plan-pill">
-              {user.is_pro ? 'Pro Plan active' : `Free Plan · ${user.trial_days_left} days left`}
-            </div>
           </div>
         </header>
 
-        <nav className="dashboard-nav">
-          {nav.map(item => (
-            <button
-              key={item.id}
-              className={view===item.id ? 'nav-card active' : 'nav-card'}
-              onClick={()=>setView(item.id)}
-            >
-              <div className="nav-icon">{item.emoji}</div>
-              <div>
-                <div className="nav-label">{item.label}</div>
-                <div className="nav-sub">{item.subtitle}</div>
+        <div className="dashboard-body">
+          <main className="dashboard-main">
+            {dashboardAlert && (
+              <div className={`dashboard-alert ${dashboardAlert.type || 'info'}`}>
+                <span>{dashboardAlert.text}</span>
               </div>
-            </button>
-          ))}
-        </nav>
+            )}
 
-        <main className="dashboard-content">
-          {view==='dynamic' && (<section className="panel-section fade-up"><h2>Dynamic QR Dashboard</h2><p className="section-sub">Launch new campaigns, update destinations, and monitor engagement.</p><DynamicDashboard user={user}/></section>)}
-          {view==='static' && (<section className="panel-section fade-up"><h2>Static QR Studio</h2><p className="section-sub">Design premium static QR codes with gradients, frames, and logos.</p><StaticDesigner isPro={user.is_pro}/></section>)}
-        </main>
-        <SiteFooter onShowTerms={()=>setInfoModal('terms')} onShowPrivacy={()=>setInfoModal('privacy')} />
+            <GlassCard className="dashboard-nav-card">
+              <nav className="dashboard-nav">
+                {nav.map(item => (
+                  <button
+                    key={item.id}
+                    className={view===item.id ? 'nav-card active' : 'nav-card'}
+                    onClick={() => {
+                      setDashboardAlert(null);
+                      if (item.id === 'builder') {
+                        openBuilder({ type: 'dynamic-new', codeId: null });
+                        return;
+                      }
+                      setView(item.id);
+                    }}
+                  >
+                    <div className="nav-icon">{item.emoji}</div>
+                    <div className="nav-copy">
+                      <div className="nav-label">{item.label}</div>
+                      <div className="nav-sub">{item.subtitle}</div>
+                    </div>
+                  </button>
+                ))}
+              </nav>
+            </GlassCard>
+
+            <div className="dashboard-content">
+              {view==='summary' && (
+                <DashboardSummary
+                  user={user}
+                  onCreateNew={openBuilder}
+                  onOpenCodes={() => setView('codes')}
+                />
+              )}
+              {view==='codes' && (
+                <MyQRCodes
+                  version={codesVersion}
+                  onCreateNew={openBuilder}
+                  onEdit={openBuilder}
+                />
+              )}
+              {view==='builder' && (
+                <BuilderFlow
+                  user={user}
+                  config={builderConfig}
+                  onClose={() => { setBuilderConfig(null); setView(lastStableView || 'summary'); }}
+                  onRefresh={() => setCodesVersion(v => v + 1)}
+                />
+              )}
+            </div>
+
+            <SiteFooter onShowTerms={()=>setInfoModal('terms')} onShowPrivacy={()=>setInfoModal('privacy')} />
+          </main>
+
+        </div>
       </div>
+
       {infoModal && (
         <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="modal-card">
