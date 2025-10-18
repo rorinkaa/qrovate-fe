@@ -106,6 +106,8 @@ export default function StaticDesigner({ isPro }) {
     reader.readAsDataURL(file);
   };
 
+  const planCopy = isPro ? 'Unlimited exports and logo overlays unlocked.' : 'Free plan: download PNG and save up to 3 designs — upgrade for SVG and analytics.';
+
   const download = (type = 'png') => {
     const mime = type === 'png' ? 'image/png' : 'image/jpeg';
     const data = canvasRef.current.toDataURL(mime);
@@ -152,11 +154,15 @@ export default function StaticDesigner({ isPro }) {
   };
 
   return (
-    <section className="card">
-      <div className="label">Static QR Designer {isPro ? <span className="badge">Pro</span> : <span className="badge">Free</span>}</div>
-      {toast && <div className="small" style={{ color: '#0a7', marginBottom: 8 }}>{toast}</div>}
+    <section className="designer-panel glass fade-up">
+      <div className="panel-header">
+        <span className="eyebrow">Static Studio</span>
+        <h3>Design on-brand static QR codes</h3>
+        <p>{planCopy}</p>
+      </div>
+      {toast && <div className="alert-success">{toast}</div>}
 
-      <div className="row wrap" style={{ gap: 8, marginBottom: 12 }}>
+      <div className="template-pills">
         {TEMPLATES.map(t => (
           <button key={t} className={tpl === t ? 'pill active' : 'pill'} onClick={() => selectTemplate(t)}>{t}</button>
         ))}

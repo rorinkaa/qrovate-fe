@@ -82,34 +82,60 @@ export default function App(){
     );
   }
 
-  return (
-    <div className="container">
-      <section className="card">
-        <div className="row" style={{justifyContent:'space-between', alignItems:'center', gap:8}}>
-          <div>Signed in as <b>{user.email}</b>{' '}
-            {user.is_pro ? <span className="badge">Pro</span> : <span className="badge">Free — Trial ends in {user.trial_days_left} days</span>}
-          </div>
-          <div className="row" style={{gap:8}}>
-            {!user.is_pro && <button onClick={upgradeWithStripe}>Upgrade with Stripe</button>}
-            <button onClick={logout}>Logout</button>
-          </div>
-        </div>
-        <div className="row wrap" style={{marginTop:10, gap:8}}>
-          <button className={view==='dynamic'?'pill active':'pill'} onClick={()=>setView('dynamic')}>Dynamic (Manage)</button>
-          <button className={view==='static'?'pill active':'pill'} onClick={()=>setView('static')}>Static (Create)</button>
-          <button className={view==='advanced'?'pill active':'pill'} onClick={()=>setView('advanced')}>Advanced Builder</button>
-          <button className={view==='templates'?'pill active':'pill'} onClick={()=>setView('templates')}>Templates</button>
-          <button className={view==='terms'?'pill active':'pill'} onClick={()=>setView('terms')}>Terms</button>
-          <button className={view==='privacy'?'pill active':'pill'} onClick={()=>setView('privacy')}>Privacy</button>
-        </div>
-      </section>
+  const nav = [
+    { id: 'dynamic', label: 'Dynamic Dashboard', subtitle: 'Manage, retarget, and analyze every dynamic QR.', emoji: '🚀' },
+    { id: 'static', label: 'Static Studio', subtitle: 'Create branded static codes with gradients and frames.', emoji: '🎨' },
+    { id: 'advanced', label: 'Advanced Builder', subtitle: 'Layer rules, geo targeting, and smart redirects.', emoji: '🧠' },
+    { id: 'templates', label: 'Template Gallery', subtitle: 'Launch fast with prebuilt QR destinations.', emoji: '📚' },
+    { id: 'terms', label: 'Terms', subtitle: 'Review usage guidelines.', emoji: '📜' },
+    { id: 'privacy', label: 'Privacy', subtitle: 'Understand how we protect data.', emoji: '🔐' }
+  ];
 
-      {view==='dynamic' && (<><h1>Dynamic QR Dashboard</h1><DynamicDashboard user={user}/></>)}
-      {view==='static' && (<><h1>Static QR Studio</h1><StaticDesigner isPro={user.is_pro}/></>)}
-      {view==='advanced' && (<><h1>Advanced QR Builder</h1><AdvancedQRBuilder user={user}/></>)}
-      {view==='templates' && (<><h1>Templates Gallery</h1><TemplatesGallery /></>)}
-      {view==='terms' && <Terms />}
-      {view==='privacy' && <Privacy />}
+  return (
+    <div className="dashboard-shell">
+      <header className="dashboard-hero glass">
+        <div>
+          <span className="eyebrow">Welcome back</span>
+          <h1>Hi, {user.email.split('@')[0] || 'there'}!</h1>
+          <p>Your workspace tracks every scan and keeps QR edits a click away.</p>
+        </div>
+        <div className="hero-cta">
+          {!user.is_pro && (
+            <button className="btn-primary" onClick={upgradeWithStripe}>
+              Upgrade to Pro
+            </button>
+          )}
+          <button className="btn-secondary ghost" onClick={logout}>Logout</button>
+          <div className="plan-pill">
+            {user.is_pro ? 'Pro Plan active' : `Free Plan · ${user.trial_days_left} days left`}
+          </div>
+        </div>
+      </header>
+
+      <nav className="dashboard-nav">
+        {nav.map(item => (
+          <button
+            key={item.id}
+            className={view===item.id ? 'nav-card active' : 'nav-card'}
+            onClick={()=>setView(item.id)}
+          >
+            <div className="nav-icon">{item.emoji}</div>
+            <div>
+              <div className="nav-label">{item.label}</div>
+              <div className="nav-sub">{item.subtitle}</div>
+            </div>
+          </button>
+        ))}
+      </nav>
+
+      <main className="dashboard-content">
+        {view==='dynamic' && (<section className="panel-section fade-up"><h2>Dynamic QR Dashboard</h2><p className="section-sub">Launch new campaigns, update destinations, and monitor engagement.</p><DynamicDashboard user={user}/></section>)}
+        {view==='static' && (<section className="panel-section fade-up"><h2>Static QR Studio</h2><p className="section-sub">Design premium static QR codes with gradients, frames, and logos.</p><StaticDesigner isPro={user.is_pro}/></section>)}
+        {view==='advanced' && (<section className="panel-section fade-up"><h2>Advanced QR Builder</h2><p className="section-sub">Automate redirects based on rules, time, or audience.</p><AdvancedQRBuilder user={user}/></section>)}
+        {view==='templates' && (<section className="panel-section fade-up"><h2>Templates Library</h2><p className="section-sub">Kickstart campaigns with pre-built QR destination templates.</p><TemplatesGallery /></section>)}
+        {view==='terms' && (<section className="panel-section fade-up"><Terms /></section>)}
+        {view==='privacy' && (<section className="panel-section fade-up"><Privacy /></section>)}
+      </main>
     </div>
   );
 }

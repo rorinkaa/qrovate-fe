@@ -77,20 +77,10 @@ function historyDescription(event) {
 
 function StatCard({ label, value, hint }) {
   return (
-    <div style={{
-      flex: '1 1 140px',
-      minWidth: 120,
-      borderRadius: 16,
-      background: '#fff',
-      border: '1px solid rgba(15,23,42,0.08)',
-      padding: '16px 18px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 6
-    }}>
-      <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 700, color: '#0f172a' }}>{value}</div>
-      {hint && <div style={{ fontSize: 12, color: '#94a3b8' }}>{hint}</div>}
+    <div className="stat-card">
+      <div className="stat-label">{label}</div>
+      <div className="stat-value">{value}</div>
+      {hint && <div className="stat-hint">{hint}</div>}
     </div>
   );
 }
@@ -326,171 +316,94 @@ export default function DynamicDashboard({ user }) {
   ];
 
   return (
-    <section className="card">
-      <div className="label">Dynamic (Create & Manage)</div>
+    <section className="dynamic-panel glass fade-up">
+      <div className="panel-header">
+        <span className="eyebrow">Dynamic Manager</span>
+        <h3>Create &amp; evolve your dynamic QR library</h3>
+        <p>Switch templates, experiment with destinations, and keep previews synced in real time.</p>
+      </div>
 
-      <div className="row wrap" style={{ gap: 8, marginBottom: 10 }}>
+      <div className="template-pills">
         {TEMPLATES.map(t => (
           <button key={t} className={tpl === t ? 'pill active' : 'pill'} onClick={() => selectTemplate(t)}>{t}</button>
         ))}
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start', marginBottom: 16 }}>
-        <div style={{ flex: '1 1 320px', minWidth: 260 }}>
-          <TemplateDataForm type={tpl} values={values} onChange={onValueChange} />
+      <div className="dynamic-grid">
+        <div className="dynamic-config">
+          <div className="dynamic-forms">
+            <TemplateDataForm type={tpl} values={values} onChange={onValueChange} />
+            <TemplatePreview type={tpl} values={values} />
+          </div>
+          <div className="action-row">
+            <button onClick={createDynamic} disabled={busy}>{busy ? 'Please wait…' : 'Create Dynamic QR'}</button>
+            <button onClick={updateSelected} disabled={busy || !sel?.id}>Update Selected</button>
+          </div>
+          {err && <div className="alert-error">{err}</div>}
+          {msg && <div className="alert-success">{msg}</div>}
         </div>
-        <TemplatePreview type={tpl} values={values} />
-      </div>
 
-      <div className="row" style={{ gap: 8, marginTop: 10 }}>
-        <button onClick={createDynamic} disabled={busy}>{busy ? 'Please wait…' : 'Create Dynamic QR'}</button>
-        <button onClick={updateSelected} disabled={busy || !sel?.id}>Update Selected</button>
-      </div>
-
-      {err && <div style={{ color: '#d33', marginTop: 8 }}>{err}</div>}
-      {msg && <div style={{ color: '#0a7', marginTop: 8 }}>{msg}</div>}
-
-      <div style={{ marginTop: 24, display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start' }}>
-        <div style={{ flex: '0 0 320px', textAlign: 'center' }}>
-          <canvas ref={previewRef} style={{ maxWidth: '100%', height: 'auto' }} />
+        <div className="dynamic-preview preview-card">
+          <div className="preview-frame">
+            <canvas ref={previewRef} style={{ maxWidth: '100%', height: 'auto' }} />
+          </div>
           {sel?.id ? (
             <>
-              <div className="small" style={{ marginTop: 8, color: '#4B5563' }}>
-                Preview: {Math.round(previewInfo.width)} × {Math.round(previewInfo.height)} px
-              </div>
-              <div className="row wrap" style={{ gap: 8, justifyContent: 'center', marginTop: 8 }}>
-                <button onClick={() => downloadStyled('png')}>Download PNG</button>
-                <button onClick={() => downloadStyled('jpeg')}>Download JPG</button>
+              <div className="preview-meta">Preview: {Math.round(previewInfo.width)} × {Math.round(previewInfo.height)} px</div>
+              <div className="download-row">
+                <button type="button" className="btn-primary" onClick={()=>downloadStyled('png')}>Download PNG</button>
+                <button type="button" className="btn-outline" onClick={()=>downloadStyled('jpeg')}>Download JPG</button>
               </div>
             </>
           ) : (
-            <div className="small" style={{ marginTop: 8, color: '#6B7280' }}>Create a QR to see a styled preview.</div>
+            <div className="preview-empty">Create a QR to see a styled preview.</div>
           )}
         </div>
 
-        <div style={{ flex: '1 1 320px', minWidth: 280, display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div>
-            <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>Design & styling</div>
-            <label className="small" style={{ display: 'flex', flexDirection: 'column', marginBottom: 12 }}>QR Size
-              <input type="range" min="240" max="720" value={style.size} onChange={e => onStyleChange('size', +e.target.value)} />
-            </label>
-
-            <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>Colors</div>
-            <div className="row wrap" style={{ gap: 8, marginBottom: 8 }}>
-              <button className={style.colorMode === 'solid' ? 'pill active' : 'pill'} onClick={() => onStyleChange('colorMode', 'solid')}>Solid</button>
-              <button className={style.colorMode === 'gradient' ? 'pill active' : 'pill'} onClick={() => onStyleChange('colorMode', 'gradient')}>Gradient</button>
-            </div>
-            <div className="row wrap" style={{ gap: 12, marginBottom: 12 }}>
-              <label className="small" style={{ display: 'flex', flexDirection: 'column' }}>Primary
-                <input type="color" value={style.foreground} onChange={e => onStyleChange('foreground', e.target.value)} />
-              </label>
-              {style.colorMode === 'gradient' && (
-                <>
-                  <label className="small" style={{ display: 'flex', flexDirection: 'column' }}>Secondary
-                    <input type="color" value={style.foregroundSecondary} onChange={e => onStyleChange('foregroundSecondary', e.target.value)} />
-                  </label>
-                  <label className="small" style={{ display: 'flex', flexDirection: 'column' }}>Angle ({Math.round(style.gradientAngle)}°)
-                    <input type="range" min="0" max="360" value={style.gradientAngle} onChange={e => onStyleChange('gradientAngle', +e.target.value)} />
-                  </label>
-                </>
-              )}
-            </div>
-
-            <label className="small" style={{ display: 'flex', flexDirection: 'column', marginBottom: 12 }}>Background
-              <input type="color" value={style.background} onChange={e => onStyleChange('background', e.target.value)} />
-            </label>
-
-            <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>Frame</div>
-            <div className="row wrap" style={{ gap: 8, marginBottom: 8 }}>
-              <button className={style.frameStyle === 'none' ? 'pill active' : 'pill'} onClick={() => onStyleChange('frameStyle', 'none')}>None</button>
-              <button className={style.frameStyle === 'rounded' ? 'pill active' : 'pill'} onClick={() => onStyleChange('frameStyle', 'rounded')}>Rounded</button>
-              <button className={style.frameStyle === 'label' ? 'pill active' : 'pill'} onClick={() => onStyleChange('frameStyle', 'label')}>Label</button>
-            </div>
-            {style.frameStyle !== 'none' && (
-              <div className="row wrap" style={{ gap: 12, marginBottom: 12 }}>
-                <label className="small" style={{ display: 'flex', flexDirection: 'column' }}>Frame color
-                  <input type="color" value={style.frameColor} onChange={e => onStyleChange('frameColor', e.target.value)} />
-                </label>
-                {style.frameStyle === 'label' && (
-                  <>
-                    <label className="small" style={{ display: 'flex', flexDirection: 'column' }}>Text
-                      <input value={style.frameText} onChange={e => onStyleChange('frameText', e.target.value)} />
-                    </label>
-                    <label className="small" style={{ display: 'flex', flexDirection: 'column' }}>Text color
-                      <input type="color" value={style.frameTextColor} onChange={e => onStyleChange('frameTextColor', e.target.value)} />
-                    </label>
-                  </>
-                )}
-              </div>
-            )}
-
-            <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>Logo (Pro)</div>
-            {isPro ? (
-              <div className="row wrap" style={{ gap: 12, marginBottom: 12 }}>
-                <input type="file" accept="image/*" onChange={onLogoUpload} />
-                <label className="small" style={{ display: 'flex', flexDirection: 'column' }}>Size
-                  <input type="range" min="0.15" max="0.35" step="0.01" value={style.logoSizeRatio} onChange={e => onStyleChange('logoSizeRatio', parseFloat(e.target.value))} />
-                </label>
-                {style.logoDataUrl && <button onClick={removeLogo}>Remove Logo</button>}
-              </div>
-            ) : (
-              <div className="small" style={{ marginBottom: 12 }}>Upgrade to Pro to add a logo overlay</div>
-            )}
+        <aside className="dynamic-meta">
+          <div className="stats-row">
+            {stats.map(stat => (
+              <StatCard key={stat.label} label={stat.label} value={stat.value} hint={stat.hint} />
+            ))}
           </div>
 
-          <div>
-            <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>Analytics</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
-              {stats.map(stat => (
-                <StatCard key={stat.label} label={stat.label} value={stat.value} hint={stat.hint} />
-              ))}
-            </div>
-
-            <div style={{
-              borderRadius: 16,
-              background: '#fff',
-              border: '1px solid rgba(15,23,42,0.08)',
-              padding: '16px 18px',
-              maxHeight: 220,
-              overflowY: 'auto'
-            }}>
-              <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', fontWeight: 600, marginBottom: 8 }}>Activity</div>
-              {historyStatus === 'loading' && <div className="small" style={{ color: '#94a3b8' }}>Loading…</div>}
-              {historyStatus === 'error' && <div className="small" style={{ color: '#dc2626' }}>{historyError}</div>}
-              {historyStatus === 'ready' && history.length === 0 && (
-                <div className="small" style={{ color: '#94a3b8' }}>No activity recorded yet.</div>
-              )}
-              {historyStatus === 'ready' && history.length > 0 && (
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {history.map((event, idx) => (
-                    <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                      <div style={{ fontSize: 14, color: '#0f172a' }}>{historyDescription(event)}</div>
-                      <div style={{ fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' }}>{formatRelative(event.ts)}</div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+          <div className="history-card glass">
+            <div className="history-title">Recent activity</div>
+            {historyStatus === 'loading' && <div className="history-muted">Loading…</div>}
+            {historyStatus === 'error' && <div className="history-error">{historyError}</div>}
+            {historyStatus === 'ready' && history.length === 0 && (
+              <div className="history-muted">No activity recorded yet.</div>
+            )}
+            {historyStatus === 'ready' && history.length > 0 && (
+              <ul className="history-list">
+                {history.map((event, idx) => (
+                  <li key={idx} className="history-item">
+                    <span>{historyDescription(event)}</span>
+                    <time>{formatRelative(event.ts)}</time>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-        </div>
+        </aside>
       </div>
 
-      <h3 style={{ marginTop: 24 }}>My dynamic codes</h3>
+      <div className="library-header">
+        <h3>My dynamic codes</h3>
+        <p>Each code previews in real time — select one to edit or share the public link.</p>
+      </div>
       {items.length === 0 ? (
-        <div style={{ color: '#666' }}>No dynamic QR codes yet.</div>
+        <div className="empty-state">No dynamic QR codes yet.</div>
       ) : (
-        <div style={{ display: 'grid', gap: 8 }}>
+        <div className="library-grid">
           {items.map(it => (
-            <div key={it.id} className="row" style={{ gap: 10, alignItems: 'center' }}>
-              <button className={sel?.id === it.id ? 'pill active' : 'pill'} onClick={() => setSel(it)}>{it.id.slice(0, 8)}…</button>
-              <a href={`${API}/qr/${it.id}`} target="_blank" rel="noreferrer">Open</a>
-              <img
-                src={`${API}/qr/svg/${it.id}`}
-                alt="qr"
-                width={72}
-                height={72}
-                style={{ border: '1px solid #eee', borderRadius: 8 }}
-              />
+            <div
+              key={it.id}
+              className={sel?.id === it.id ? 'library-card active' : 'library-card'}
+              onClick={() => setSel(it)}
+            >
+              <span>{it.id.slice(0, 8)}…</span>
+              <a href={`${API}/qr/${it.id}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>Open ↗</a>
             </div>
           ))}
         </div>

@@ -5,9 +5,12 @@ export default function RegisterForm({ onRegister }){
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
 
   async function submit(e){
     e.preventDefault(); setMsg('');
+    if (busy) return;
+    setBusy(true);
     try{
       const data = await api('/auth/register',{
         method:'POST',
@@ -17,6 +20,7 @@ export default function RegisterForm({ onRegister }){
       const payload = data?.token ? { ...data.user, token: data.token } : data.user;
       onRegister(payload);
     }catch(err){ setMsg(err.message); }
+    finally{ setBusy(false); }
   }
 
   return (
@@ -25,7 +29,7 @@ export default function RegisterForm({ onRegister }){
       <div className="row">
         <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email"/>
         <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password"/>
-        <button type="submit">Create account</button>
+        <button type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
       </div>
       <div className="small" style={{color:'crimson', marginTop:8}}>{msg}</div>
     </form>
