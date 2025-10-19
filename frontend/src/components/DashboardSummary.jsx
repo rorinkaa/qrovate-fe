@@ -77,7 +77,7 @@ export default function DashboardSummary({ user, onCreateNew, onOpenCodes }) {
     <div className="dashboard-summary">
       <div className="dashboard-summary-grid">
         <GlassCard className="summary-hero dashboard-animate" style={{ '--delay': '0s' }}>
-          <div className="hero-grid">
+          <div>
             <div className="hero-copy">
               <SectionHeading
                 eyebrow="Workspace overview"
@@ -97,10 +97,8 @@ export default function DashboardSummary({ user, onCreateNew, onOpenCodes }) {
                 >
                   Open static studio
                 </button>
-                <span className={`dashboard-chip ${user.is_pro ? 'success' : ''}`}>{planLabel}</span>
               </div>
             </div>
-            <HeroIllustration />
           </div>
         </GlassCard>
 
@@ -121,56 +119,6 @@ export default function DashboardSummary({ user, onCreateNew, onOpenCodes }) {
           </div>
         </GlassCard>
 
-        <GlassCard className="summary-card insights-card dashboard-animate" style={{ '--delay': '0.12s' }}>
-          <h3>Workflow ideas</h3>
-          <div className="insights-grid">
-            {highlights.map((item, idx) => (
-              <div
-                key={item.title}
-                className="insight-pill"
-                style={{ '--delay': `${idx * 0.1}s` }}
-              >
-                <div className="insight-icon">{item.icon}</div>
-                <div>
-                  <strong>{item.title}</strong>
-                  <p>{item.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </GlassCard>
-
-        <GlassCard className="summary-card checklist-card dashboard-animate" style={{ '--delay': '0.2s' }}>
-          <h3>Next steps</h3>
-          <ul className="assistant-list">
-            {tasks.map((item, idx) => (
-              <li key={idx}>{item}</li>
-            ))}
-          </ul>
-        </GlassCard>
-
-        <GlassCard className="summary-card timeline-card dashboard-animate" style={{ '--delay': '0.28s' }}>
-          <h3>Campaign timeline</h3>
-          <div className="timeline-list">
-            {timeline.map((entry, idx) => (
-              <div
-                key={idx}
-                className="timeline-item"
-                style={{ '--delay': `${idx * 0.12}s` }}
-              >
-                <span className="timeline-icon">{entry.icon}</span>
-                <div>
-                  <strong>{entry.time}</strong>
-                  <p>{entry.detail}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="summary-link-grid">
-            <button type="button" onClick={onOpenCodes}>🗂 Manage QR library</button>
-            <button type="button" disabled>📊 Analytics (coming soon)</button>
-          </div>
-        </GlassCard>
 
         <GlassCard className="summary-card studio-card dashboard-animate" style={{ '--delay': '0.34s' }}>
           <h3>Launch a new experience</h3>
@@ -195,28 +143,6 @@ export default function DashboardSummary({ user, onCreateNew, onOpenCodes }) {
           </div>
         </GlassCard>
 
-        <GlassCard className="summary-card inspiration-card dashboard-animate" style={{ '--delay': '0.42s' }}>
-          <div className="inspiration-illustration">
-            <div className="badge shimmer">Top performer this week</div>
-            <h3>“Spring pop-up” campaign</h3>
-            <p>Scored 3.2K scans in 72 hours with device-aware redirects, gradient frames, and trackable UTM links.</p>
-            <div className="inspiration-stats">
-              <div>
-                <strong>3.2k</strong>
-                <span>Scans</span>
-              </div>
-              <div>
-                <strong>41%</strong>
-                <span>Mobile first</span>
-              </div>
-              <div>
-                <strong>+27%</strong>
-                <span>Repeat visitors</span>
-              </div>
-            </div>
-            <button className="btn-secondary ghost" onClick={()=>onCreateNew?.({ type: 'dynamic-new', codeId: null })}>Use this playbook</button>
-          </div>
-        </GlassCard>
       </div>
     </div>
   );

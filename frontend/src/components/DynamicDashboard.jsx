@@ -3,8 +3,9 @@ import { api, API } from '../api';
 import { renderStyledQR } from '../lib/styledQr';
 import TemplatePreview from './TemplatePreview.jsx';
 import {
-  TEMPLATES,
   TEMPLATE_DEFAULTS,
+  TEMPLATE_LIBRARY,
+  TEMPLATE_LIBRARY_MAP,
   buildPayload,
   TemplateDataForm,
   normalizeUrl
@@ -12,6 +13,21 @@ import {
 import GlassCard from './ui/GlassCard.jsx';
 import StepRail from './ui/StepRail.jsx';
 import SectionHeading from './ui/SectionHeading.jsx';
+
+function withAlpha(hex = '#2563eb', alpha = 0.2) {
+  const sanitized = (hex || '').replace('#', '');
+  const normalized = sanitized.length === 3
+    ? sanitized.split('').map(ch => ch + ch).join('')
+    : sanitized.padEnd(6, '0').slice(0, 6);
+  if (normalized.length !== 6 || Number.isNaN(parseInt(normalized, 16))) {
+    return `rgba(37, 99, 235, ${alpha})`;
+  }
+  const value = parseInt(normalized, 16);
+  const r = (value >> 16) & 255;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 const STYLE_DEFAULTS = {
   size: 320,
@@ -87,20 +103,6 @@ const STATIC_STEPS = [
   { id: 'review', title: STEP_COPY.staticReview.title, caption: STEP_COPY.staticReview.caption }
 ];
 
-
-const TEMPLATE_META = {
-  URL: { emoji: '🔗', title: 'Website link', description: 'Send scanners to any landing page or CTA.' },
-  TEXT: { emoji: '💬', title: 'Text snippet', description: 'Show a note, Wi-Fi code, or promo instantly.' },
-  Email: { emoji: '✉️', title: 'Email draft', description: 'Prefill subject & body for quick replies.' },
-  SMS: { emoji: '📱', title: 'Text message', description: 'Trigger an SMS to your team or support line.' },
-  Phone: { emoji: '📞', title: 'Phone call', description: 'Dial a hotline or concierge in one tap.' },
-  Location: { emoji: '📍', title: 'Map destination', description: 'Open maps with directions to your venue.' },
-  Event: { emoji: '🗓️', title: 'Calendar invite', description: 'Add your event to Apple or Google calendars.' },
-  WiFi: { emoji: '📶', title: 'Wi‑Fi login', description: 'Share SSID and password without typing.' },
-  Vcard: { emoji: '👤', title: 'Contact card', description: 'Save your profile to phone contacts.' },
-  Whatsapp: { emoji: '💬', title: 'WhatsApp chat', description: 'Start a conversation with your team.' },
-  PIX: { emoji: '💱', title: 'PIX payment', description: 'Collect payments via Brazil’s PIX system.' }
-};
 
 function destinationSummary(type, values) {
   if (!values) return 'Destination not configured yet.';
@@ -183,7 +185,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
   const safeStep = Math.min(step, steps.length - 1);
   const currentStep = steps[safeStep] || steps[0];
   const isDynamic = flowType === 'dynamic';
-  const templateMeta = (key) => TEMPLATE_META[key] || { emoji: '✨', title: key, description: 'Customize this template for your flow.' };
+  const templateMeta = (key) => TEMPLATE_LIBRARY_MAP[key] || { icon: '✨', title: key, description: 'Customize this template for your flow.' };
   const stepNumberFor = (id) => {
     const idx = steps.findIndex(item => item.id === id);
     return `Step ${idx >= 0 ? idx + 1 : '?'}`;
@@ -507,30 +509,44 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
               <button
                 type="button"
                 className={['template-card', isDynamic ? 'active' : ''].join(' ')}
+                style={{
+                  '--template-accent': '#2563eb',
+                  '--template-accent-soft': 'rgba(37, 99, 235, 0.12)',
+                  '--template-shadow': 'rgba(37, 99, 235, 0.32)'
+                }}
                 onClick={() => {
                   setFlowType('dynamic');
                 }}
               >
-                <span className="template-icon">📊</span>
+                <div className="template-icon" aria-hidden="true">
+                  <span>📊</span>
+                </div>
                 <div className="template-body">
                   <strong>Dynamic code</strong>
                   <p>Change destinations anytime, capture scan analytics, and manage codes from the library.</p>
                 </div>
-                <span className="template-chevron">→</span>
+                <span className="template-arrow" aria-hidden="true">→</span>
               </button>
               <button
                 type="button"
                 className={['template-card', !isDynamic ? 'active' : ''].join(' ')}
+                style={{
+                  '--template-accent': '#f97316',
+                  '--template-accent-soft': 'rgba(249, 115, 22, 0.16)',
+                  '--template-shadow': 'rgba(249, 115, 22, 0.32)'
+                }}
                 onClick={() => {
                   setFlowType('static');
                 }}
               >
-                <span className="template-icon">⚡</span>
+                <div className="template-icon" aria-hidden="true">
+                  <span>⚡</span>
+                </div>
                 <div className="template-body">
                   <strong>Static code</strong>
                   <p>Embed the payload directly in the QR, perfect for print-ready Wi-Fi, text, or contact details.</p>
                 </div>
-                <span className="template-chevron">→</span>
+                <span className="template-arrow" aria-hidden="true">→</span>
               </button>
             </div>
             <div className="dynamic-step-actions">
@@ -564,25 +580,36 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
               />
             </label>
             <div className="template-grid">
-              {TEMPLATES.slice(0, 12).map(template => {
-                const meta = templateMeta(template);
-                const active = tpl === template;
+              {TEMPLATE_LIBRARY.map(template => {
+                const meta = templateMeta(template.id);
+                const active = tpl === template.id;
+                const accent = meta.accent || '#2563eb';
+                const softAccent = meta.accentSoft || withAlpha(accent, 0.14);
+                const shadow = withAlpha(accent, 0.32);
                 return (
                   <button
-                    key={template}
+                    key={template.id}
                     type="button"
                     className={['template-card', active ? 'active' : ''].join(' ')}
+                    aria-pressed={active}
+                    style={{
+                      '--template-accent': accent,
+                      '--template-accent-soft': softAccent,
+                      '--template-shadow': shadow
+                    }}
                     onClick={() => {
-                      selectTemplate(template);
+                      selectTemplate(template.id);
                       if (sel) setStep(1);
                     }}
                   >
-                    <span className="template-icon">{meta.emoji}</span>
+                    <div className="template-icon" aria-hidden="true">
+                      <span>{meta.icon || '✨'}</span>
+                    </div>
                     <div className="template-body">
                       <strong>{meta.title}</strong>
                       <p>{meta.description}</p>
                     </div>
-                    <span className="template-chevron">→</span>
+                    <span className="template-arrow" aria-hidden="true">→</span>
                   </button>
                 );
               })}
@@ -810,14 +837,6 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                   <span className="dynamic-review-label">Styling</span>
                   <strong>{style.colorMode === 'gradient' ? 'Gradient ink' : 'Solid ink'}</strong>
                   <p>{style.frameStyle === 'none' ? 'No frame applied.' : `Frame: ${style.frameStyle}.`} {style.logoDataUrl ? 'Logo overlay active.' : 'No logo overlay.'}</p>
-                </div>
-                <div className="dynamic-review-item">
-                  <span className="dynamic-review-label">Next steps</span>
-                  <ul>
-                    <li>Download the PNG for print or digital.</li>
-                    <li>Use the public link to share or embed.</li>
-                    <li>Monitor scans from the right-hand panel.</li>
-                  </ul>
                 </div>
               </div>
               <div className="dynamic-step-actions">

@@ -1,23 +1,163 @@
 import React from 'react';
 
-export const TEMPLATES = [
-  'URL',
-  'TEXT',
-  'Phone',
-  'SMS',
-  'Email',
-  'Whatsapp',
-  'Facetime',
-  'Location',
-  'WiFi',
-  'Event',
-  'Vcard',
-  'Crypto',
-  'PayPal',
-  'UPI Payment',
-  'EPC Payment',
-  'PIX Payment'
+export const TEMPLATE_LIBRARY = [
+  {
+    id: 'URL',
+    title: 'Website',
+    description: 'Link to any website URL.',
+    icon: '🌐',
+    category: 'links',
+    accent: '#0ea5e9',
+    accentSoft: 'rgba(14, 165, 233, 0.14)'
+  },
+  {
+    id: 'TEXT',
+    title: 'Text or note',
+    description: 'Show announcements, offers, or simple copy.',
+    icon: '📝',
+    category: 'content',
+    accent: '#7c3aed',
+    accentSoft: 'rgba(124, 58, 237, 0.16)'
+  },
+  {
+    id: 'Phone',
+    title: 'Phone call',
+    description: 'Dial a number instantly after scanning.',
+    icon: '📞',
+    category: 'contact',
+    accent: '#ef4444',
+    accentSoft: 'rgba(239, 68, 68, 0.18)'
+  },
+  {
+    id: 'SMS',
+    title: 'SMS message',
+    description: 'Prefill a text message to your team or hotline.',
+    icon: '💬',
+    category: 'contact',
+    accent: '#00a884',
+    accentSoft: 'rgba(0, 168, 132, 0.18)'
+  },
+  {
+    id: 'Email',
+    title: 'Email draft',
+    description: 'Open a composed email with subject and body.',
+    icon: '✉️',
+    category: 'contact',
+    accent: '#2563eb',
+    accentSoft: 'rgba(37, 99, 235, 0.16)'
+  },
+  {
+    id: 'Whatsapp',
+    title: 'WhatsApp chat',
+    description: 'Start a WhatsApp conversation instantly.',
+    icon: '🟢',
+    category: 'contact',
+    accent: '#25d366',
+    accentSoft: 'rgba(37, 211, 102, 0.18)'
+  },
+  {
+    id: 'Facetime',
+    title: 'FaceTime call',
+    description: 'Launch a FaceTime call or video session.',
+    icon: '🎥',
+    category: 'contact',
+    accent: '#38bdf8',
+    accentSoft: 'rgba(56, 189, 248, 0.18)'
+  },
+  {
+    id: 'Location',
+    title: 'Map location',
+    description: 'Open maps with directions to your venue.',
+    icon: '📍',
+    category: 'events',
+    accent: '#0ea5e9',
+    accentSoft: 'rgba(14, 165, 233, 0.12)'
+  },
+  {
+    id: 'WiFi',
+    title: 'Wi‑Fi login',
+    description: 'Share SSID and password without typing.',
+    icon: '📶',
+    category: 'events',
+    accent: '#14b8a6',
+    accentSoft: 'rgba(20, 184, 166, 0.16)'
+  },
+  {
+    id: 'Event',
+    title: 'Calendar event',
+    description: 'Add an event directly to the scanner’s calendar.',
+    icon: '📅',
+    category: 'events',
+    accent: '#f97316',
+    accentSoft: 'rgba(249, 115, 22, 0.18)'
+  },
+  {
+    id: 'Vcard',
+    title: 'Digital business card',
+    description: 'Save your contact details to their phone.',
+    icon: '🪪',
+    category: 'contact',
+    accent: '#8b5cf6',
+    accentSoft: 'rgba(139, 92, 246, 0.18)'
+  },
+  {
+    id: 'Crypto',
+    title: 'Crypto payment',
+    description: 'Request BTC, ETH, or other crypto payments.',
+    icon: '₿',
+    category: 'payments',
+    accent: '#fbbf24',
+    accentSoft: 'rgba(251, 191, 36, 0.2)'
+  },
+  {
+    id: 'PayPal',
+    title: 'PayPal checkout',
+    description: 'Send users to your PayPal.me payment link.',
+    icon: '💸',
+    category: 'payments',
+    accent: '#1070d1',
+    accentSoft: 'rgba(16, 112, 209, 0.18)'
+  },
+  {
+    id: 'UPI Payment',
+    title: 'UPI payment',
+    description: 'Collect INR payments via UPI apps.',
+    icon: '🇮🇳',
+    category: 'payments',
+    accent: '#0f766e',
+    accentSoft: 'rgba(15, 118, 110, 0.2)'
+  },
+  {
+    id: 'EPC Payment',
+    title: 'SEPA transfer',
+    description: 'Generate a single euro payments area QR.',
+    icon: '🏦',
+    category: 'payments',
+    accent: '#2563eb',
+    accentSoft: 'rgba(37, 99, 235, 0.14)'
+  },
+  {
+    id: 'PIX Payment',
+    title: 'PIX payment',
+    description: 'Request instant payments via PIX (Brazil).',
+    icon: '💠',
+    category: 'payments',
+    accent: '#22d3ee',
+    accentSoft: 'rgba(34, 211, 238, 0.18)'
+  }
 ];
+
+export const TEMPLATE_CATEGORIES = [
+  { id: 'links', label: 'Links & social' },
+  { id: 'content', label: 'Content & info' },
+  { id: 'contact', label: 'Contact & messaging' },
+  { id: 'events', label: 'Events & access' },
+  { id: 'payments', label: 'Payments & checkout' }
+];
+
+export const TEMPLATE_LIBRARY_MAP = Object.fromEntries(TEMPLATE_LIBRARY.map(item => [item.id, item]));
+
+export const TEMPLATES = TEMPLATE_LIBRARY.map(item => item.id);
 
 export const TEMPLATE_DEFAULTS = {
   URL: { url: '' },

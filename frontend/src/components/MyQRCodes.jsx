@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GlassCard from './ui/GlassCard.jsx';
 import { api, API } from '../api';
-import TemplatePreview from './TemplatePreview.jsx';
 import { buildPayload } from './TemplateDataForm.jsx';
 import { renderStyledQR } from '../lib/styledQr';
 
@@ -127,45 +126,111 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
             <p>Create your first dynamic QR and it will show up here automatically.</p>
           </div>
         ) : (
-          <div className="code-card-grid">
+          <div className="code-table">
+            <div className="code-table-head">
+              <span>Preview</span>
+              <span>Destination</span>
+              <span>Activity</span>
+              <span>Actions</span>
+            </div>
             {dynamicCodes.map(code => {
               const isExpanded = expandedId === code.id;
+              const displayName = code.name || `QR ${code.id.slice(0, 6)}`;
+              const destination = code.target || 'No destination configured yet.';
+              const updatedAgo = formatRelative(code.updatedAt || code.createdAt);
+              const lastScan = code.lastScanAt ? formatRelative(code.lastScanAt) : '—';
               return (
-                <article key={code.id} className={['code-card', isExpanded ? 'expanded' : ''].join(' ')}>
-                  <div className="code-card-header">
-                    <div>
-                      <span className="badge subtle">Dynamic</span>
-                      <h4>{code.name || `QR ${code.id.slice(0, 6)}`}</h4>
+                <React.Fragment key={code.id}>
+                  <div className="code-row">
+                    <div className="code-cell code-preview">
+                      <img
+                        src={`${API}/qr/svg/${code.id}`}
+                        alt={`QR preview for ${displayName}`}
+                        loading="lazy"
+                      />
                     </div>
-                    <span className="meta">{formatRelative(code.updatedAt || code.createdAt)}</span>
-                  </div>
-                  <p className="code-card-target">{code.target || 'No destination configured yet.'}</p>
-                  <div className="code-card-actions">
-                    <button type="button" className="btn-secondary ghost" onClick={() => onEdit?.({ type: 'dynamic', codeId: code.id })}>
-                      Edit flow
-                    </button>
-                    <a className="btn-secondary ghost" href={`${API}/qr/${code.id}`} target="_blank" rel="noreferrer">
-                      Open link
-                    </a>
-                    <a className="btn-secondary ghost" href={`${API}/qr/svg/${code.id}`} target="_blank" rel="noreferrer">
-                      Download SVG
-                    </a>
-                    <button
-                      type="button"
-                      className="btn-secondary ghost"
-                      onClick={() => setExpandedId(isExpanded ? null : code.id)}
-                    >
-                      {isExpanded ? 'Hide stats' : 'View stats'}
-                    </button>
+                    <div className="code-cell code-info">
+                      <div className="code-name-line">
+                        <span className="badge subtle">Dynamic</span>
+                        <strong>{displayName}</strong>
+                      </div>
+                      <span className="code-target" title={destination}>{destination}</span>
+                      <span className="code-meta">Updated {updatedAgo}</span>
+                    </div>
+                    <div className="code-cell code-metrics">
+                      <div>
+                        <span>Scans</span>
+                        <strong>{code.scanCount ?? 0}</strong>
+                      </div>
+                      <div>
+                        <span>Blocked</span>
+                        <strong>{code.blockedCount ?? 0}</strong>
+                      </div>
+                      <div>
+                        <span>Last</span>
+                        <strong>{lastScan}</strong>
+                      </div>
+                    </div>
+                    <div className="code-cell code-actions">
+                      <button
+                        type="button"
+                        className="icon-button"
+                        onClick={() => onEdit?.({ type: 'dynamic', codeId: code.id })}
+                        aria-label="Edit dynamic QR"
+                        title="Edit dynamic QR"
+                      >
+                        ✏️
+                      </button>
+                      <a
+                        className="icon-button"
+                        href={`${API}/qr/${code.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label="Open redirect link"
+                        title="Open redirect link"
+                      >
+                        🔗
+                      </a>
+                      <a
+                        className="icon-button"
+                        href={`${API}/qr/svg/${code.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label="Download SVG"
+                        title="Download SVG"
+                      >
+                        ⬇️
+                      </a>
+                      <button
+                        type="button"
+                        className={['icon-button', isExpanded ? 'active' : ''].join(' ')}
+                        onClick={() => setExpandedId(isExpanded ? null : code.id)}
+                        aria-label={isExpanded ? 'Hide stats' : 'View stats'}
+                        title={isExpanded ? 'Hide stats' : 'View stats'}
+                      >
+                        📊
+                      </button>
+                    </div>
                   </div>
                   {isExpanded && (
-                    <div className="code-card-stats">
-                      <div><span>Total scans</span><strong>{code.scanCount ?? 0}</strong></div>
-                      <div><span>Blocked scans</span><strong>{code.blockedCount ?? 0}</strong></div>
-                      <div><span>Last scan</span><strong>{code.lastScanAt ? new Date(code.lastScanAt).toLocaleString() : 'Not yet scanned'}</strong></div>
+                    <div className="code-row code-row-details">
+                      <div className="code-details-grid">
+                        <div>
+                          <span>Created</span>
+                          <strong>{code.createdAt ? new Date(code.createdAt).toLocaleString() : '—'}</strong>
+                        </div>
+                        <div>
+                          <span>Last scan</span>
+                          <strong>{code.lastScanAt ? new Date(code.lastScanAt).toLocaleString() : 'Not yet scanned'}</strong>
+                        </div>
+                        <div className="code-details-target" title={destination}>
+                          <span>Destination</span>
+                          <strong>{destination}</strong>
+                        </div>
+                      </div>
                     </div>
                   )}
-                </article>
+                </React.Fragment>
               );
             })}
           </div>
@@ -189,9 +254,14 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
             <p>Use the builder to create a static QR and hit “Save static design” on the review step.</p>
           </div>
         ) : (
-          <div className="static-grid">
+          <div className="static-table">
+            <div className="static-table-head">
+              <span>Preview</span>
+              <span>Details</span>
+              <span>Actions</span>
+            </div>
             {staticDesigns.map(design => (
-              <StaticDesignCard
+              <StaticDesignRow
                 key={design.id}
                 design={design}
                 onDelete={handleDeleteStatic}
@@ -205,7 +275,7 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
   );
 }
 
-function StaticDesignCard({ design, onDelete, formatRelative }) {
+function StaticDesignRow({ design, onDelete, formatRelative }) {
   const canvasRef = useRef(null);
   const payload = useMemo(() => design.payload || buildPayload(design.template, design.values), [design]);
   const style = useMemo(() => ({ ...STATIC_STYLE_DEFAULTS, ...(design.style || {}) }), [design]);
@@ -262,42 +332,69 @@ function StaticDesignCard({ design, onDelete, formatRelative }) {
   };
 
   const templateLabel = design.template || 'Template';
+  const savedAgo = design.createdAt ? formatRelative(design.createdAt) : 'moments ago';
 
   return (
-    <article className="static-card">
-      <div className="static-card-preview">
-        <canvas ref={canvasRef} />
+    <div className="static-row">
+      <div className="static-cell static-preview">
+        <canvas ref={canvasRef} width="72" height="72" />
       </div>
-      <div className="static-card-body">
-        <div className="static-card-meta">
+      <div className="static-cell static-info">
+        <div className="static-name-line">
+          <strong>{design.name || 'Static QR design'}</strong>
           <span className="badge subtle">{templateLabel}</span>
-          <h4>{design.name || 'Static QR design'}</h4>
-          <p>{formatStaticSummary(design.template, design.values)}</p>
         </div>
-        <div className="static-card-content">
-          <div className="static-card-mock">
-            <div className="preview-phone">
-              <div className="preview-phone-notch" />
-              <div className="preview-phone-screen">
-                <TemplatePreview type={design.template} values={design.values} />
-              </div>
-            </div>
-          </div>
-          <div className="static-card-controls">
-            <div className="download-chip-row">
-              <button className="btn-secondary ghost" onClick={() => downloadFromCanvas('png')}>PNG</button>
-              <button className="btn-secondary ghost" onClick={() => downloadFromCanvas('jpeg')}>JPG</button>
-              <button className="btn-secondary ghost" onClick={downloadPdf}>PDF</button>
-              <button className="btn-secondary ghost" onClick={downloadSvg}>SVG</button>
-            </div>
-            <div className="static-card-footer">
-              <span>Saved {formatRelative(design.createdAt)}</span>
-              <button className="link danger" onClick={() => onDelete(design.id)}>Delete</button>
-            </div>
-          </div>
-        </div>
+        <p className="static-summary">{formatStaticSummary(design.template, design.values)}</p>
+        <span className="static-meta">Saved {savedAgo}</span>
       </div>
-    </article>
+      <div className="static-cell static-actions">
+        <button
+          className="icon-button"
+          onClick={() => downloadFromCanvas('png')}
+          aria-label="Download PNG"
+          title="Download PNG"
+          type="button"
+        >
+          🖼️
+        </button>
+        <button
+          className="icon-button"
+          onClick={() => downloadFromCanvas('jpeg')}
+          aria-label="Download JPG"
+          title="Download JPG"
+          type="button"
+        >
+          📸
+        </button>
+        <button
+          className="icon-button"
+          onClick={downloadPdf}
+          aria-label="Print PDF"
+          title="Print PDF"
+          type="button"
+        >
+          📰
+        </button>
+        <button
+          className="icon-button"
+          onClick={downloadSvg}
+          aria-label="Download SVG"
+          title="Download SVG"
+          type="button"
+        >
+          ⬇️
+        </button>
+        <button
+          className="icon-button danger"
+          onClick={() => onDelete(design.id)}
+          aria-label="Delete static design"
+          title="Delete static design"
+          type="button"
+        >
+          🗑️
+        </button>
+      </div>
+    </div>
   );
 }
 
