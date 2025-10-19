@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GlassCard from './ui/GlassCard.jsx';
 import { api, API } from '../api';
+import { onItemSynced } from '../lib/syncQueue';
 import { buildPayload } from './TemplateDataForm.jsx';
 import { renderStyledQR } from '../lib/styledQr';
 
@@ -14,6 +15,7 @@ function staticSaveKey() {
     return `${LEGACY_STATIC_KEY}:anon`;
   }
 }
+
 const STATIC_STYLE_DEFAULTS = {
   size: 320,
   background: '#ffffff',
@@ -54,18 +56,13 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
       return;
     }
     (async () => {
+      let server = null;
       try {
-        // Try server-side list first. If the server returns a non-empty
-        // array we trust it; but if it returns an empty array we should
-        // still fall back to any designs saved locally (localStorage).
-        const server = await api('/qr/static/list');
-        if (Array.isArray(server) && server.length > 0) {
-          setStaticDesigns(server);
-          return;
-        }
+        server = await api('/qr/static/list');
       } catch (e) {
-        // fallback to localStorage (per-user key). Also migrate legacy global key if present.
+        server = null;
       }
+
       try {
         const key = staticSaveKey();
         // migrate legacy global key into per-user key if needed
@@ -73,14 +70,30 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
           const legacy = JSON.parse(localStorage.getItem(LEGACY_STATIC_KEY) || 'null');
           if (Array.isArray(legacy) && legacy.length) {
             const existing = JSON.parse(localStorage.getItem(key) || '[]');
-            const merged = [...legacy, ...Array.isArray(existing) ? existing : []].slice(0, 100);
+            const merged = [...legacy, ...(Array.isArray(existing) ? existing : [])].slice(0, 100);
             localStorage.setItem(key, JSON.stringify(merged));
-            try { localStorage.removeItem(LEGACY_STATIC_KEY); } catch(_){}
+            try { localStorage.removeItem(LEGACY_STATIC_KEY); } catch(_){ }
           }
-        } catch(_){}
+        } catch(_){ }
 
         const stored = JSON.parse(localStorage.getItem(key) || '[]');
-        setStaticDesigns(Array.isArray(stored) ? stored : []);
+        const localArr = Array.isArray(stored) ? stored : [];
+
+        if (Array.isArray(server)) {
+          // If server returned an empty list but local has items, prefer local.
+          if (server.length === 0 && localArr.length > 0) {
+            setStaticDesigns(localArr);
+            return;
+          }
+          // Merge: server items first (fresh), then local items without duplicate ids
+          const byId = new Map();
+          server.forEach(item => { if (item && item.id) byId.set(item.id, item); });
+          localArr.forEach(item => { if (item && item.id && !byId.has(item.id)) byId.set(item.id, item); });
+          const merged = Array.from(byId.values()).slice(0, 100);
+          setStaticDesigns(merged);
+        } else {
+          setStaticDesigns(localArr);
+        }
       } catch {
         setStaticDesigns([]);
       }
@@ -90,6 +103,20 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
   useEffect(() => {
     loadStaticDesigns();
   }, [version, loadStaticDesigns]);
+
+  // subscribe to background sync events to replace pending local items
+  useEffect(() => {
+    const unsub = onItemSynced((created, localId) => {
+      try {
+        setStaticDesigns(prev => prev.map(d => d.id === localId ? created : d));
+        const key = staticSaveKey();
+        const stored = JSON.parse(localStorage.getItem(key) || '[]');
+        const updated = stored.map(d => d.id === localId ? created : d);
+        localStorage.setItem(key, JSON.stringify(updated));
+      } catch (_){ }
+    });
+    return unsub;
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -310,6 +337,30 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
                 key={design.id}
                 design={design}
                 onDelete={handleDeleteStatic}
+                onRetry={async (id) => {
+                  // attempt to sync a pending design by id
+                  try {
+                    const key = staticSaveKey();
+                    const stored = JSON.parse(localStorage.getItem(key) || '[]');
+                    const item = stored.find(s => s.id === id) || staticDesigns.find(s => s.id === id);
+                    if (!item) return;
+                    // send to server (omit _pending)
+                    const payload = { ...item };
+                    delete payload._pending;
+                    const created = await api('/qr/static/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (created && created.id) {
+                      // replace in state and storage
+                      setStaticDesigns(prev => prev.map(d => d.id === id ? created : d));
+                      try {
+                        const storedNow = JSON.parse(localStorage.getItem(key) || '[]');
+                        const updated = storedNow.map(d => d.id === id ? created : d);
+                        localStorage.setItem(key, JSON.stringify(updated));
+                      } catch (_){ }
+                    }
+                  } catch (e) {
+                    setMsg('Retry failed. Will try again later.');
+                  }
+                }}
                 formatRelative={formatRelative}
               />
             ))}
@@ -320,7 +371,7 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
   );
 }
 
-function StaticDesignRow({ design, onDelete, formatRelative }) {
+function StaticDesignRow({ design, onDelete, onRetry, formatRelative }) {
   const canvasRef = useRef(null);
   const payload = useMemo(() => design.payload || buildPayload(design.template, design.values), [design]);
   const style = useMemo(() => ({ ...STATIC_STYLE_DEFAULTS, ...(design.style || {}) }), [design]);
@@ -393,51 +444,69 @@ function StaticDesignRow({ design, onDelete, formatRelative }) {
         <span className="static-meta">Saved {savedAgo}</span>
       </div>
       <div className="static-cell static-actions">
-        <button
-          className="icon-button"
-          onClick={() => downloadFromCanvas('png')}
-          aria-label="Download PNG"
-          title="Download PNG"
-          type="button"
-        >
-          🖼️
-        </button>
-        <button
-          className="icon-button"
-          onClick={() => downloadFromCanvas('jpeg')}
-          aria-label="Download JPG"
-          title="Download JPG"
-          type="button"
-        >
-          📸
-        </button>
-        <button
-          className="icon-button"
-          onClick={downloadPdf}
-          aria-label="Print PDF"
-          title="Print PDF"
-          type="button"
-        >
-          📰
-        </button>
-        <button
-          className="icon-button"
-          onClick={downloadSvg}
-          aria-label="Download SVG"
-          title="Download SVG"
-          type="button"
-        >
-          ⬇️
-        </button>
-        <button
-          className="icon-button danger"
-          onClick={() => onDelete(design.id)}
-          aria-label="Delete static design"
-          title="Delete static design"
-          type="button"
-        >
-          🗑️
-        </button>
+        {design._pending ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="tiny-spinner" aria-hidden="true" />
+            <small style={{ color: '#64748b' }}>Syncing…</small>
+            <button className="icon-button" type="button" title="Retry sync" aria-label="Retry sync" onClick={() => {
+              try {
+                // add the design back into the persistent queue
+                const key = staticSaveKey();
+                const stored = JSON.parse(localStorage.getItem(key) || '[]');
+                const item = stored.find(s => s.id === design.id) || design;
+                import('../lib/syncQueue').then(mod => mod.addToQueue(item)).catch(() => { if (onRetry) onRetry(design.id); });
+              } catch (e) { if (onRetry) onRetry(design.id); }
+            }}>🔁</button>
+          </div>
+        ) : (
+          <>
+            <button
+              className="icon-button"
+              onClick={() => downloadFromCanvas('png')}
+              aria-label="Download PNG"
+              title="Download PNG"
+              type="button"
+            >
+              🖼️
+            </button>
+            <button
+              className="icon-button"
+              onClick={() => downloadFromCanvas('jpeg')}
+              aria-label="Download JPG"
+              title="Download JPG"
+              type="button"
+            >
+              📸
+            </button>
+            <button
+              className="icon-button"
+              onClick={downloadPdf}
+              aria-label="Print PDF"
+              title="Print PDF"
+              type="button"
+            >
+              📰
+            </button>
+            <button
+              className="icon-button"
+              onClick={downloadSvg}
+              aria-label="Download SVG"
+              title="Download SVG"
+              type="button"
+            >
+              ⬇️
+            </button>
+            <button
+              className="icon-button danger"
+              onClick={() => onDelete(design.id)}
+              aria-label="Delete static design"
+              title="Delete static design"
+              type="button"
+            >
+              🗑️
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

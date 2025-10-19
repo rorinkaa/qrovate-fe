@@ -1143,6 +1143,23 @@ button[disabled] {
   flex-direction: column;
   gap: 18px;
 }
+.dynamic-step-card {
+  transition: transform 220ms ease, opacity 220ms ease;
+}
+.dynamic-step-card.enter { opacity: 0; transform: translateX(8px); }
+.dynamic-step-card.enter-active { opacity: 1; transform: translateX(0); }
+
+.step-card-wrap { will-change: transform; touch-action: pan-y; }
+.step-card-wrap.slide-left .dynamic-step-card { animation: slide-left 260ms ease both; }
+.step-card-wrap.slide-right .dynamic-step-card { animation: slide-right 260ms ease both; }
+@keyframes slide-left {
+  from { transform: translateX(8px); opacity: 0.9; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slide-right {
+  from { transform: translateX(-8px); opacity: 0.9; }
+  to { transform: translateX(0); opacity: 1; }
+}
 .template-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -1397,6 +1414,75 @@ button[disabled] {
 }
 .dynamic-preview-card .preview-frame {
   margin-bottom: 14px;
+}
+
+/* Responsive adjustments for step rail and builder flow */
+@media (max-width: 640px) {
+  /* Make the horizontal step rail scrollable and compact */
+  .step-rail.horizontal {
+    gap: 8px;
+    padding: 8px 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    scroll-snap-type: x proximity;
+  }
+  .step-rail.horizontal .step-rail-item {
+    flex: 0 0 auto;
+    padding: 8px 10px;
+    min-width: 110px;
+    scroll-snap-align: start;
+  }
+  .step-rail.horizontal .step-rail-caption { display: none; }
+
+  /* Stack main content and hide preview to maximize space for the flow steps */
+  .dynamic-wizard-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .dynamic-main-column { width: 100%; }
+  .dynamic-preview-column { display: none; }
+  .dynamic-step-card { padding: 16px; }
+}
+
+/* hide desktop step rail and show a compact mobile header */
+.desktop-step-rail { display: block; }
+.mobile-step-header { display: none; }
+@media (max-width: 640px) {
+  .desktop-step-rail { display: none; }
+  .mobile-step-header {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.95);
+    box-shadow: 0 12px 30px rgba(15,23,42,0.06);
+    margin-bottom: 8px;
+  }
+  .mobile-step-header .icon-button { width: 40px; height: 40px; }
+}
+
+/* Mobile inline preview styling */
+.mobile-inline-preview-wrap { display: none; margin-bottom: 12px; }
+.mobile-inline-preview { border-radius: 12px; box-shadow: 0 12px 30px rgba(15,23,42,0.12); width: 140px; height: 140px; display: block; }
+@media (max-width: 640px) {
+  .mobile-inline-preview-wrap { display: block; }
+  /* position small preview at the top center of main column */
+  .mobile-inline-preview-wrap { display: flex; justify-content: center; }
+}
+
+/* Modal tweaks for mobile preview */
+.modal-card.small { max-width: 420px; padding: 18px; border-radius: 12px; }
+.modal-overlay { display:flex; align-items:center; justify-content:center; position:fixed; inset:0; background: rgba(11,17,34,0.4); z-index: 200; }
+.modal-card .modal-close { position:absolute; right:12px; top:10px; background:none; border:none; font-size:20px; }
+
+@media (min-width: 641px) and (max-width: 900px) {
+  /* Mid breakpoint: reduce nav subtitle clutter and allow step-rail to wrap safely */
+  .nav-sub { display: none; }
+  .dashboard-nav { gap: 12px; }
 }
 .preview-phone {
   position: relative;
@@ -2282,12 +2368,6 @@ section {
 .assistant-card::after {
   display: none;
 }
-.hero-card {
-  /* padding: 0;
-  background: linear-gradient(140deg, rgba(37, 99, 235, 0.18), rgba(236, 72, 153, 0.24)) !important;
-  box-shadow: 0 32px 90px -50px rgba(79, 70, 229, 0.45);
-  color: #f8fafc; */
-}
 .hero-card .dashboard-hero {
   padding: 28px 30px;
 }
@@ -2409,6 +2489,11 @@ section {
   border-color: rgba(59, 130, 246, 0.4);
   background: rgba(59, 130, 246, 0.08);
   transform: translateX(2px);
+}
+.step-rail-item:focus {
+  outline: none;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
+  transform: translateX(0);
 }
 .step-rail.horizontal .step-rail-item:hover {
   transform: none;
@@ -3391,6 +3476,16 @@ section {
   transform: translateY(-1px);
   box-shadow: 0 14px 32px rgba(11, 95, 255, 0.3);
 }
+/* tiny spinner for optimistic pending states */
+.tiny-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,0.08);
+  border-top-color: rgba(11,95,255,0.9);
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 .auth-links {
   display: flex;
   flex-wrap: wrap;
@@ -3752,6 +3847,11 @@ section {
   padding: 0 2px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.35);
 }
+
+/* prevent nav cards from pushing or wrapping layout badly on medium widths */
+.dashboard-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.dashboard-nav::-webkit-scrollbar { height: 6px; }
+.dashboard-nav::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.06); border-radius: 6px; }
 .nav-card {
   border: none;
   background: transparent;
@@ -3816,6 +3916,86 @@ section {
   align-items: flex-start;
   gap: 2px;
 }
+
+/* Bottom navigation for mobile */
+.bottom-nav {
+  display: none;
+}
+.bottom-nav .bottom-nav-item {
+  border: none;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 12px;
+  color: #64748b;
+  font-size: 12px;
+}
+.bottom-nav .bottom-nav-item .bni-icon {
+  font-size: 18px;
+}
+.bottom-nav .bottom-nav-item.active {
+  color: #0b1120;
+}
+
+@media (max-width: 640px) {
+  /* hide the top nav cards on small screens */
+  .dashboard-nav-card { display: none; }
+  /* hide the topbar actions that duplicate functionality */
+  .dashboard-topbar .dashboard-topbar-actions .btn-primary { display: none; }
+  /* show mobile bottom nav */
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    height: 56px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.96);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+    padding: 6px 10px;
+    gap: 8px;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 120;
+  }
+  .bottom-nav .bottom-nav-item {
+    flex: 1 1 0;
+    border-radius: 10px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .bottom-nav .bottom-nav-item.active {
+    background: linear-gradient(90deg, rgba(37,99,235,0.08), rgba(124,58,237,0.08));
+    color: #0b1120;
+  }
+  /* bottom toolbar removed — mobile header on top handles navigation */
+  .step-rail.horizontal { scroll-padding: 16px; }
+  .step-rail.horizontal::after { content: ''; width: 12px; flex: 0 0 12px; }
+  /* subtle swipe hint */
+  .step-rail.horizontal { position: relative; }
+  .step-rail.horizontal:before { content: ''; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background: linear-gradient(90deg, rgba(255,255,255,0), rgba(0,0,0,0.04)); pointer-events: none; border-radius: 12px; }
+  /* make main content avoid being covered by nav */
+  .dashboard-body { padding-bottom: 110px; }
+}
+
+/* Focus and press states for accessibility */
+.bottom-nav .bottom-nav-item:focus {
+  outline: none;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.12);
+  transform: translateY(-2px);
+}
+.bottom-nav .bottom-nav-item:active {
+  transform: translateY(0);
+}
+.bottom-nav .bni-icon svg { display: block; }
+.bottom-nav .bni-label { font-size: 11px; letter-spacing: 0.02em; }
 .dashboard-content {
   display: flex;
   flex-direction: column;

@@ -12,6 +12,7 @@ import BuilderFlow from './components/BuilderFlow.jsx';
 import MyQRCodes from './components/MyQRCodes.jsx';
 import CookieBanner from './components/CookieBanner.jsx';
 import CookieManager from './components/CookieManager.jsx';
+import BottomNav from './components/BottomNav.jsx';
 
 import { API, api } from './api.js';
 
@@ -392,11 +393,12 @@ export default function App(){
             )}
 
             <GlassCard className="dashboard-nav-card">
-              <nav className="dashboard-nav">
+              <nav className="dashboard-nav" role="navigation" aria-label="Primary">
                 {nav.map(item => (
                   <button
                     key={item.id}
                     className={view===item.id ? 'nav-card active' : 'nav-card'}
+                    aria-current={view===item.id ? 'page' : undefined}
                     onClick={() => {
                       setDashboardAlert(null);
                       if (item.id === 'builder') {
@@ -527,6 +529,14 @@ export default function App(){
           </div>
         </div>
       )}
+
+      <BottomNav
+        nav={nav}
+        view={view}
+        setView={setView}
+        openBuilder={openBuilder}
+        setDashboardAlert={setDashboardAlert}
+      />
     </>
   );
 }

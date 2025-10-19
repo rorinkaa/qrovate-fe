@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api, API } from '../api';
 import { renderStyledQR } from '../lib/styledQr';
+import { addToQueue } from '../lib/syncQueue';
 import TemplatePreview from './TemplatePreview.jsx';
 import {
   TEMPLATES,
@@ -180,6 +181,9 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const previewRef = useRef(null);
+  const mobilePreviewRef = useRef(null);
+  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
+  const [mobilePreviewData, setMobilePreviewData] = useState(null);
   const [previewInfo, setPreviewInfo] = useState({ width: 0, height: 0 });
   const [previewMode, setPreviewMode] = useState('qr');
   const draftsRef = useRef({});
@@ -273,11 +277,16 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
 
   useEffect(() => {
     const canvas = previewRef.current;
+    const mobileCanvas = mobilePreviewRef.current;
     if (!canvas) return;
     const clear = () => {
       const ctx = canvas.getContext('2d');
       ctx?.clearRect(0, 0, canvas.width, canvas.height);
       setPreviewInfo({ width: 0, height: 0 });
+      if (mobileCanvas) {
+        const mctx = mobileCanvas.getContext('2d');
+        mctx?.clearRect(0, 0, mobileCanvas.width, mobileCanvas.height);
+      }
     };
     let cancelled = false;
     const styleOptions = {
@@ -301,12 +310,22 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
           clear();
           return;
         }
-        const info = await renderStyledQR(canvas, `${API}/qr/${sel.id}`, styleOptions);
-        if (!cancelled && info) setPreviewInfo(info);
+        try {
+          const info = await renderStyledQR(canvas, `${API}/qr/${sel.id}`, styleOptions);
+          if (!cancelled && info) setPreviewInfo(info);
+        } catch {}
+        if (mobileCanvas) {
+          try { await renderStyledQR(mobileCanvas, `${API}/qr/${sel.id}`, { ...styleOptions, size: 140 }); } catch {}
+        }
       } else {
         const payload = buildPayload(tpl, values);
-        const info = await renderStyledQR(canvas, payload || ' ', styleOptions);
-        if (!cancelled && info) setPreviewInfo(info);
+        try {
+          const info = await renderStyledQR(canvas, payload || ' ', styleOptions);
+          if (!cancelled && info) setPreviewInfo(info);
+        } catch {}
+        if (mobileCanvas) {
+          try { await renderStyledQR(mobileCanvas, payload || ' ', { ...styleOptions, size: 140 }); } catch {}
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -364,6 +383,87 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
       }
     }
     setStep(Math.max(0, Math.min(index, maxIndex)));
+  };
+
+  // touch swipe support for mobile step header
+  const touchStartXRef = React.useRef(null);
+  const touchStartTimeRef = React.useRef(null);
+  const onTouchStart = (e) => {
+    const t = e.touches?.[0];
+    if (!t) return;
+    touchStartXRef.current = t.clientX;
+    touchStartTimeRef.current = Date.now();
+  };
+  const onTouchEnd = (e) => {
+    const t = e.changedTouches?.[0];
+    if (!t || touchStartXRef.current == null) return;
+    const dx = t.clientX - touchStartXRef.current;
+    const dt = Date.now() - touchStartTimeRef.current;
+    const absDx = Math.abs(dx);
+    // require a minimum distance and reasonable speed
+    if (absDx > 50 && dt < 800) {
+      if (dx < 0) {
+        // swipe left -> next
+        setStep(s => Math.min(steps.length - 1, s + 1));
+      } else {
+        // swipe right -> prev
+        setStep(s => Math.max(0, s - 1));
+      }
+    }
+    touchStartXRef.current = null;
+    touchStartTimeRef.current = null;
+  };
+
+  // pointer-based drag for smoother mobile UX
+  const dragState = React.useRef({ startX: 0, startY: 0, dragging: false, canceled: false });
+  const [dragOffset, setDragOffset] = React.useState(0);
+  const [animDirection, setAnimDirection] = React.useState(null); // 'left' | 'right' or null
+
+  const onPointerDown = (e) => {
+    // only track primary pointer
+    dragState.current.startX = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
+    dragState.current.startY = e.clientY || (e.touches && e.touches[0]?.clientY) || 0;
+    dragState.current.dragging = true;
+    dragState.current.canceled = false;
+    setDragOffset(0);
+  };
+
+  const onPointerMove = (e) => {
+    if (!dragState.current.dragging) return;
+    const x = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
+    const y = e.clientY || (e.touches && e.touches[0]?.clientY) || 0;
+    const dx = x - dragState.current.startX;
+    const dy = y - dragState.current.startY;
+    // cancel drag if vertical scrolling dominant
+    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 12) {
+      dragState.current.canceled = true;
+      setDragOffset(0);
+      return;
+    }
+    // limit offset for feel
+    const limited = Math.max(-window.innerWidth, Math.min(window.innerWidth, dx));
+    setDragOffset(limited);
+  };
+
+  const onPointerUp = (e) => {
+    if (!dragState.current.dragging) return;
+    dragState.current.dragging = false;
+    if (dragState.current.canceled) {
+      setDragOffset(0);
+      return;
+    }
+    const endX = e.clientX || (e.changedTouches && e.changedTouches[0]?.clientX) || 0;
+    const dx = endX - dragState.current.startX;
+    const threshold = Math.max(60, window.innerWidth * 0.15);
+    if (dx < -threshold) {
+      setAnimDirection('left');
+      setStep(s => Math.min(steps.length - 1, s + 1));
+    } else if (dx > threshold) {
+      setAnimDirection('right');
+      setStep(s => Math.max(0, s - 1));
+    }
+    // reset drag offset after a frame so animation can play
+    requestAnimationFrame(() => setDragOffset(0));
   };
 
   const downloadStyled = (type = 'png') => {
@@ -498,12 +598,22 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
         }
       } catch(_){}
 
+      // optimistic local save and background sync
+      const pending = { ...design, _pending: true };
       const stored = JSON.parse(localStorage.getItem(key) || '[]');
-      const next = [design, ...stored].slice(0, MAX_STATIC_SAVED);
+      const next = [pending, ...stored].slice(0, MAX_STATIC_SAVED);
       localStorage.setItem(key, JSON.stringify(next));
-      setMsg('Static design saved locally.');
+      setMsg('Static design saved locally. Syncing…');
       setErr('');
       onRefresh?.();
+
+      // add to persistent retry queue — syncQueue will call the API and notify via listeners
+      try {
+        addToQueue(pending);
+        setMsg('Static design saved locally. Will sync in background.');
+      } catch (_e) {
+        setMsg('Saved locally. Will retry sync when online.');
+      }
     } catch (e) {
       setErr('Could not save static design locally.');
     }
@@ -900,23 +1010,71 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
   return (
     <div className="dynamic-wizard fade-up">
       <div className="dynamic-header">
-        <StepRail
-          steps={steps}
-          current={safeStep}
-          onSelect={handleSelectStep}
-          orientation="horizontal"
-        />
+        {/* Desktop step rail (hidden on mobile) */}
+        <div className="desktop-step-rail">
+          <StepRail
+            steps={steps}
+            current={safeStep}
+            onSelect={handleSelectStep}
+            orientation="horizontal"
+          />
+        </div>
+        {/* Mobile step header (visible only on small screens) */}
+        <div
+          className="mobile-step-header"
+          role="region"
+          aria-label="Step header"
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+        >
+          <button type="button" className="icon-button" aria-label="Previous step" onClick={() => setStep(s => Math.max(0, s - 1))}>◀</button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ fontSize: 12, color: '#64748b' }}>{currentStep.caption ? currentStep.caption.split('.')[0] : 'Step'}</div>
+            <div style={{ fontWeight: 700 }}>{safeStep + 1} / {steps.length}</div>
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>{currentStep.title}</div>
+          </div>
+          <button type="button" className="icon-button" aria-label="Next step" onClick={() => setStep(s => Math.min(steps.length - 1, s + 1))}>▶</button>
+        </div>
       </div>
 
       <div className={layoutClasses.join(' ')}>
         <div className="dynamic-main-column">
+          {/* Mobile inline preview (visible only on small screens) */}
+          <div
+            className="mobile-inline-preview-wrap"
+            role="button"
+            tabIndex={0}
+            aria-label="Open QR preview"
+            onClick={async () => {
+              try {
+                if (!mobilePreviewRef.current) return;
+                const data = mobilePreviewRef.current.toDataURL('image/png');
+                setMobilePreviewData(data);
+                setMobilePreviewOpen(true);
+              } catch {}
+            }}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
+          >
+            <canvas ref={mobilePreviewRef} className="mobile-inline-preview" width="140" height="140" aria-hidden="true" />
+          </div>
           {(err || msg) && (
             <div className="dynamic-feedback">
               {err && <div className="alert-error">{err}</div>}
               {msg && <div className="alert-success">{msg}</div>}
             </div>
           )}
-          {renderStepCard()}
+          <div
+            className={["step-card-wrap", animDirection ? `slide-${animDirection}` : ''].join(' ')}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onTouchStart={onPointerDown}
+            onTouchMove={onPointerMove}
+            onTouchEnd={onPointerUp}
+            style={{ transform: `translateX(${dragOffset}px)` }}
+          >
+            {renderStepCard()}
+          </div>
         </div>
 
         {showPreviewColumn && (
@@ -959,7 +1117,35 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
             </GlassCard>
           </div>
         )}
+        {/* (bottom toolbar removed — mobile header provides step controls) */}
+        {/* Mobile preview modal */}
+        <MobilePreviewModal open={mobilePreviewOpen} data={mobilePreviewData} onClose={() => setMobilePreviewOpen(false)} />
       </div>
     </div>
   );
+}
+
+// Mobile preview modal component styles are in styles.css
+function MobilePreviewModal({ open, data, onClose }) {
+  if (!open) return null;
+  let FocusTrap;
+  try { FocusTrap = require('focus-trap-react').default; } catch (e) { FocusTrap = null; }
+  const content = (
+    <div className="modal-overlay" role="dialog" aria-modal="true">
+      <div className="modal-card small" role="document">
+        <button className="modal-close" onClick={onClose} aria-label="Close">&times;</button>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <img src={data} alt="QR preview" style={{ maxWidth: '90vw', maxHeight: '80vh' }} tabIndex={0} />
+        </div>
+      </div>
+    </div>
+  );
+  if (FocusTrap) {
+    return (
+      <FocusTrap focusTrapOptions={{ onDeactivate: onClose, initialFocus: false }}>
+        {content}
+      </FocusTrap>
+    );
+  }
+  return content;
 }
