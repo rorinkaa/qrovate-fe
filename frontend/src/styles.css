@@ -2863,6 +2863,115 @@ section {
   line-height: 1.7;
 }
 
+.legal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+  padding-right: 8px;
+}
+.legal-content::-webkit-scrollbar {
+  width: 6px;
+}
+.legal-content::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+}
+.legal-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.legal-header h2 {
+  margin: 0;
+  font-size: 28px;
+}
+.legal-header p {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.85);
+  line-height: 1.7;
+  font-size: 15px;
+}
+.legal-pill {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.75);
+}
+.legal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.legal-section h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #f1f5f9;
+}
+.legal-section p {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.85);
+  line-height: 1.7;
+  font-size: 14px;
+}
+.legal-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: rgba(226, 232, 240, 0.85);
+  line-height: 1.6;
+}
+.legal-list li::marker {
+  color: rgba(191, 219, 254, 0.9);
+}
+.legal-highlight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+.legal-highlight-grid article {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.legal-highlight-grid h4 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  color: #f8fafc;
+}
+.legal-highlight-grid p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(226, 232, 240, 0.82);
+}
+.legal-footer {
+  padding: 18px 0 4px;
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
+  font-size: 13px;
+  color: rgba(226, 232, 240, 0.8);
+}
+.legal-footer a {
+  color: #93c5fd;
+  text-decoration: none;
+  font-weight: 600;
+}
+.legal-footer a:hover {
+  text-decoration: underline;
+}
+
 .auth-modal {
   position: relative;
   display: flex;
