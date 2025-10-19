@@ -55,9 +55,11 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
     }
     (async () => {
       try {
-        // Try server-side list first
+        // Try server-side list first. If the server returns a non-empty
+        // array we trust it; but if it returns an empty array we should
+        // still fall back to any designs saved locally (localStorage).
         const server = await api('/qr/static/list');
-        if (Array.isArray(server)) {
+        if (Array.isArray(server) && server.length > 0) {
           setStaticDesigns(server);
           return;
         }
