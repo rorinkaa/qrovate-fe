@@ -176,7 +176,7 @@ export default function Homepage({ onRequestAuth }) {
           </div>
           <div className="upsell-actions">
             <button className="btn-primary" onClick={() => onRequestAuth?.()}>Try Pro (Beta)</button>
-            <button className="btn-secondary ghost" onClick={() => onRequestAuth?.()}>See dashboard tour</button>
+            <button className="btn-secondary btn-secondary-white ghost" onClick={() => onRequestAuth?.()}>See dashboard tour</button>
           </div>
         </div>
       </section>
@@ -221,11 +221,6 @@ export default function Homepage({ onRequestAuth }) {
         </div>
       </section>
 
-      <div className="floating-cta">
-        <span>Need a QR fast?</span>
-        <a href="#quick-generator" className="btn-primary">Open Quick Generator</a>
-        <button className="btn-secondary ghost" onClick={() => onRequestAuth?.()}>Unlock Dynamic</button>
-      </div>
     </div>
   );
 }

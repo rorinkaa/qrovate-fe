@@ -192,6 +192,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
     const idx = steps.findIndex(item => item.id === id);
     if (idx >= 0) setStep(idx);
   };
+  const previewStartIndex = useMemo(() => steps.findIndex(item => item.id === 'goal'), [steps]);
 
   useEffect(() => {
     (async () => {
@@ -255,12 +256,12 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
   }, [sel, isDynamic]);
 
   useEffect(() => {
-    setPreviewMode('qr');
-  }, [safeStep, flowType, sel?.id]);
-
-  useEffect(() => {
-    setPreviewMode('qr');
-  }, [safeStep, flowType, sel?.id]);
+    if (previewStartIndex >= 0 && safeStep === previewStartIndex) {
+      setPreviewMode('content');
+    } else {
+      setPreviewMode('qr');
+    }
+  }, [safeStep, flowType, sel?.id, previewStartIndex]);
 
   useEffect(() => {
     const canvas = previewRef.current;
@@ -489,7 +490,6 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
   };
 
   const destinationSummaryText = destinationSummary(tpl, values);
-  const previewStartIndex = steps.findIndex(item => item.id === 'destination');
   const showPreviewColumn = previewStartIndex >= 0 ? safeStep >= previewStartIndex : safeStep > 0;
   const layoutClasses = ['dynamic-wizard-layout'];
   if (!showPreviewColumn) layoutClasses.push('no-preview');
@@ -587,9 +587,6 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                 );
               })}
             </div>
-            <div className="dynamic-inline-preview">
-              <TemplatePreview type={tpl} values={values} variant="inline" />
-            </div>
             <div className="dynamic-step-actions">
               <button
                 className="btn-primary"
@@ -631,9 +628,6 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                 : 'Everything you enter here is encoded directly inside the QR.'}
             />
             <TemplateDataForm type={tpl} values={values} onChange={onValueChange} />
-            <div className="dynamic-inline-preview">
-              <TemplatePreview type={tpl} values={values} variant="inline" />
-            </div>
             <div className="dynamic-step-actions">
               <button className="btn-secondary ghost" onClick={() => goToStepId('goal')}>Back</button>
               <button className="btn-primary" onClick={() => goToStepId('branding')}>Next: Branding</button>
@@ -911,39 +905,37 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
               <div className="preview-toggle">
                 <button
                   type="button"
-                  className={previewMode === 'qr' ? 'active' : ''}
-                  onClick={() => setPreviewMode('qr')}
-                >
-                  QR preview
-                </button>
-                <button
-                  type="button"
                   className={previewMode === 'content' ? 'active' : ''}
                   onClick={() => setPreviewMode('content')}
                 >
-                  Content mock
+                  Preview
+                </button>
+                <button
+                  type="button"
+                  className={previewMode === 'qr' ? 'active' : ''}
+                  onClick={() => setPreviewMode('qr')}
+                >
+                  QR code
                 </button>
               </div>
-              <div className={`preview-frame ${previewMode === 'qr' ? 'visible' : 'hidden'}`}>
+              <div className={`preview-frame ${previewMode === 'content' ? 'hidden' : 'visible'}`}>
                 <canvas ref={previewRef} style={{ maxWidth: '100%', height: 'auto' }} />
               </div>
               {previewMode === 'content' && (
                 <div className="preview-phone">
                   <div className="preview-phone-notch" />
                   <div className="preview-phone-screen">
-                    <TemplatePreview type={tpl} values={values} />
+                    <TemplatePreview type={tpl} values={values} variant="phone" />
                   </div>
                 </div>
               )}
-              {isDynamic ? (
-                sel?.id ? (
-                  <div className="preview-note">Live preview shows the current dynamic redirect.</div>
-                ) : (
-                  <div className="preview-empty">Create a dynamic QR to see the live preview.</div>
-                )
-              ) : (
-                <div className="preview-note">Switch tabs to check the QR art or the encoded content.</div>
-              )}
+              <div className="preview-note">
+                {previewMode === 'content'
+                  ? 'This is a friendly mock of what scanners will read after the QR loads.'
+                  : isDynamic
+                    ? (sel?.id ? 'The QR canvas mirrors your current settings.' : 'Create or select a dynamic QR to view the live canvas.')
+                    : 'This QR is rendered locally from your static content.'}
+              </div>
             </GlassCard>
           </div>
         )}

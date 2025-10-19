@@ -328,65 +328,70 @@ function describeTemplate(type, values) {
   }
 }
 
-function PreviewCard({ descriptor }) {
+function coerceString(value) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.join(' ');
+  if (React.isValidElement(value)) return '';
+  return String(value);
+}
+
+function toLines(value) {
+  const str = coerceString(value);
+  if (!str) return [];
+  return str.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+}
+
+function PhonePreview({ descriptor }) {
   const {
     eyebrow,
     title,
     subtitle,
     body,
     highlight,
-    tip,
+    inlineSummary,
     accent,
     icon
   } = descriptor;
-  const gradient = accent
-    ? `linear-gradient(135deg, ${withAlpha(accent, 0.34)}, ${withAlpha(accent, 0.18)})`
-    : `linear-gradient(135deg, rgba(15, 23, 42, 0.82), rgba(30, 64, 175, 0.66))`;
-  const borderColor = withAlpha(accent || '#1e3a8a', 0.34);
-  const accentText = '#f8fafc';
+
+  const bodyLines = typeof body === 'string' ? toLines(body) : [];
+  const highlightLines = toLines(highlight);
+  const actionLines = [];
+  if (highlightLines.length) actionLines.push(...highlightLines);
+  if (inlineSummary) actionLines.push(inlineSummary);
+  if (bodyLines.length && actionLines.length === 0) {
+    actionLines.push(...bodyLines.slice(0, 2));
+  }
 
   return (
-    <div style={{ ...paneBase, background: gradient, border: `1px solid ${borderColor}`, color: accentText }}>
-      {eyebrow && <div style={{ ...headerStyle, color: withAlpha('#ffffff', 0.82) }}>{eyebrow}</div>}
-      <div style={{ display: 'flex', gap: 14, alignItems: icon ? 'center' : 'flex-start' }}>
-        {icon && (
-          <div style={{
-            width: 64,
-            height: 64,
-            borderRadius: 20,
-            background: withAlpha('#ffffff', 0.18),
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 28
-          }}>
-            {icon}
-          </div>
-        )}
-        <div style={{ flex: 1 }}>
-          {title && <div style={{ ...titleStyle, color: '#f8fafc' }}>{title}</div>}
-          {subtitle && <div style={{ ...subtitleStyle, color: withAlpha('#f8fafc', 0.82) }}>{subtitle}</div>}
-          {highlight && (
-            <div style={{
-              marginTop: 10,
-              padding: '10px 14px',
-              borderRadius: 14,
-              background: withAlpha('#ffffff', 0.18),
-              color: '#f8fafc',
-              fontWeight: 600,
-              fontSize: 14
-            }}>{highlight}</div>
-          )}
+    <div className="content-preview-shell">
+      <div className="content-preview-hero" style={{ background: `linear-gradient(160deg, ${withAlpha(accent || '#8b5cf6', 0.28)}, rgba(255,255,255,0.95))` }}>
+        <div className="content-preview-avatar">{icon || '✨'}</div>
+        <div className="content-preview-copy">
+          {eyebrow && <span className="content-preview-chip">{eyebrow}</span>}
+          <h4>{title || 'Your preview title'}</h4>
+          {subtitle && <p>{subtitle}</p>}
         </div>
       </div>
-      {body && (
-        <div style={{ ...subtitleStyle, color: withAlpha('#f8fafc', 0.85) }}>
-          {typeof body === 'string' ? body.split('\n').map((line, idx) => (
-            <div key={idx} style={idx ? { marginTop: 6 } : undefined}>{line}</div>
-          )) : body}
+
+      <div className="content-preview-body">
+        {React.isValidElement(body) ? (
+          <div className="content-preview-rich">{body}</div>
+        ) : (
+          bodyLines.map((line, idx) => <p key={idx}>{line}</p>)
+        )}
+      </div>
+
+      {actionLines.length > 0 && (
+        <div className="content-preview-actions">
+          {actionLines.slice(0, 3).map((line, idx) => (
+            <button type="button" className="content-preview-action" key={idx}>
+              <span>{line}</span>
+              <span aria-hidden="true">↗</span>
+            </button>
+          ))}
         </div>
       )}
-      {tip && <div style={{ ...footerStyle, color: withAlpha('#f8fafc', 0.7) }}>{tip}</div>}
     </div>
   );
 }
@@ -420,5 +425,6 @@ function InlinePreview({ descriptor }) {
 export default function TemplatePreview({ type, values, variant = 'card' }) {
   const descriptor = describeTemplate(type, values);
   if (variant === 'inline') return <InlinePreview descriptor={descriptor} />;
-  return <PreviewCard descriptor={descriptor} />;
+  if (variant === 'phone') return <PhonePreview descriptor={descriptor} />;
+  return <InlinePreview descriptor={descriptor} />;
 }
