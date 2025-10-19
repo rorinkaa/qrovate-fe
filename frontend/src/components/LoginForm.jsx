@@ -231,8 +231,6 @@ export default function LoginForm({ onLogin, onNotice, resetToken = null, onRese
             <input
               id="login-email"
               type="email"
-              value={email}
-              onChange={e=>setEmail(e.target.value)}
               placeholder="you@example.com"
               autoComplete="email"
               required
@@ -243,8 +241,6 @@ export default function LoginForm({ onLogin, onNotice, resetToken = null, onRese
             <input
               id="login-password"
               type="password"
-              value={password}
-              onChange={e=>setPassword(e.target.value)}
               placeholder="Enter your password"
               autoComplete="current-password"
               required

@@ -10,8 +10,18 @@ import GlassCard from './components/ui/GlassCard.jsx';
 import DashboardSummary from './components/DashboardSummary.jsx';
 import BuilderFlow from './components/BuilderFlow.jsx';
 import MyQRCodes from './components/MyQRCodes.jsx';
+import CookieBanner from './components/CookieBanner.jsx';
+import CookieManager from './components/CookieManager.jsx';
 
 import { API, api } from './api.js';
+
+const COOKIE_KEY = 'qr_cookie_consent';
+const COOKIE_PREF_KEY = 'qr_cookie_preferences';
+const defaultCookiePrefs = {
+  analytics: false,
+  personalization: false,
+  marketing: false
+};
 
 const initialView = typeof window !== 'undefined'
   ? (localStorage.getItem('qr_last_view') === 'codes' ? 'codes' : 'summary')
@@ -30,6 +40,28 @@ export default function App(){
   const [resendBusy, setResendBusy] = useState(false);
   const [builderConfig, setBuilderConfig] = useState(null);
   const [codesVersion, setCodesVersion] = useState(0);
+  const [cookieConsent, setCookieConsent] = useState(() => {
+    if (typeof window === 'undefined') return 'unknown';
+    return localStorage.getItem(COOKIE_KEY) || 'unknown';
+  });
+  const [showCookieBanner, setShowCookieBanner] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !localStorage.getItem(COOKIE_KEY);
+  });
+  const [cookiePreferences, setCookiePreferences] = useState(() => {
+    if (typeof window === 'undefined') return defaultCookiePrefs;
+    try {
+      const stored = JSON.parse(localStorage.getItem(COOKIE_PREF_KEY) || 'null');
+      if (stored && typeof stored === 'object') {
+        return { ...defaultCookiePrefs, ...stored };
+      }
+    } catch {
+      /* ignore */
+    }
+    return defaultCookiePrefs;
+  });
+  const [cookieManagerOpen, setCookieManagerOpen] = useState(false);
+
   const scrollToTop = useCallback(() => {
     if (typeof window === 'undefined') return;
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -62,6 +94,25 @@ export default function App(){
       }catch{ /* ignore */ }
     }
   },[]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = localStorage.getItem(COOKIE_KEY);
+    if (stored) {
+      setCookieConsent(stored);
+      setShowCookieBanner(false);
+    } else {
+      setCookieConsent('unknown');
+      setShowCookieBanner(true);
+    }
+    try {
+      const prefRaw = JSON.parse(localStorage.getItem(COOKIE_PREF_KEY) || 'null');
+      if (prefRaw && typeof prefRaw === 'object') {
+        setCookiePreferences(prev => ({ ...prev, ...prefRaw }));
+      }
+    } catch {
+      setCookiePreferences(defaultCookiePrefs);
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -390,7 +441,14 @@ export default function App(){
               )}
             </div>
 
-            <SiteFooter onShowTerms={()=>setInfoModal('terms')} onShowPrivacy={()=>setInfoModal('privacy')} />
+            <SiteFooter
+              onShowTerms={()=>setInfoModal('terms')}
+              onShowPrivacy={()=>setInfoModal('privacy')}
+              onShowCookies={() => {
+                setCookieManagerOpen(true);
+                setShowCookieBanner(false);
+              }}
+            />
           </main>
 
         </div>
@@ -401,6 +459,71 @@ export default function App(){
           <div className="modal-card">
             <button className="modal-close" onClick={()=>setInfoModal(null)} aria-label="Close">&times;</button>
             {infoModal==='terms' ? <Terms /> : <Privacy />}
+          </div>
+        </div>
+      )}
+      {(cookieConsent === 'unknown' || showCookieBanner) && (
+        <CookieBanner
+          consent={cookieConsent}
+          onAccept={() => {
+            localStorage.setItem(COOKIE_KEY, 'accepted');
+            localStorage.setItem(COOKIE_PREF_KEY, JSON.stringify({
+              analytics: true,
+              personalization: true,
+              marketing: true
+            }));
+            setCookieConsent('accepted');
+            setCookiePreferences({
+              analytics: true,
+              personalization: true,
+              marketing: true
+            });
+            setShowCookieBanner(false);
+          }}
+          onReject={() => {
+            localStorage.setItem(COOKIE_KEY, 'rejected');
+            localStorage.setItem(COOKIE_PREF_KEY, JSON.stringify(defaultCookiePrefs));
+            setCookieConsent('rejected');
+            setCookiePreferences(defaultCookiePrefs);
+            setShowCookieBanner(false);
+          }}
+          onDetails={() => {
+            setCookieManagerOpen(true);
+            setShowCookieBanner(false);
+          }}
+        />
+      )}
+      {cookieManagerOpen && (
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal-card cookie-modal-card">
+            <button className="modal-close" onClick={() => {
+              setCookieManagerOpen(false);
+              if (cookieConsent === 'unknown') setShowCookieBanner(true);
+            }} aria-label="Close">&times;</button>
+            <CookieManager
+              preferences={cookiePreferences}
+              onUpdate={(key, value) => {
+                setCookiePreferences(prev => ({ ...prev, [key]: value }));
+              }}
+              onSave={(mode) => {
+                if (mode === 'accepted') {
+                  localStorage.setItem(COOKIE_KEY, 'accepted');
+                  localStorage.setItem(COOKIE_PREF_KEY, JSON.stringify(cookiePreferences));
+                  setCookieConsent('accepted');
+                } else {
+                  localStorage.setItem(COOKIE_KEY, 'rejected');
+                  localStorage.setItem(COOKIE_PREF_KEY, JSON.stringify(defaultCookiePrefs));
+                  setCookiePreferences(defaultCookiePrefs);
+                  setCookieConsent('rejected');
+                }
+                setCookieManagerOpen(false);
+                setShowCookieBanner(false);
+              }}
+              onClose={() => {
+                setCookieManagerOpen(false);
+                if (cookieConsent === 'unknown') setShowCookieBanner(true);
+              }}
+            />
           </div>
         </div>
       )}
