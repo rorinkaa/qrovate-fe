@@ -10,8 +10,8 @@ const STEP_RESEND = 'resend';
 const STEP_RESET = 'reset';
 
 export default function LoginForm({ onLogin, onNotice, resetToken = null, onResetConsumed }){
-  const [email, setEmail] = useState('test@pro.com');
-  const [password, setPassword] = useState('test1234');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [msg, setMsg] = useState('');
@@ -231,6 +231,8 @@ export default function LoginForm({ onLogin, onNotice, resetToken = null, onRese
             <input
               id="login-email"
               type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
               autoComplete="email"
               required
@@ -241,6 +243,8 @@ export default function LoginForm({ onLogin, onNotice, resetToken = null, onRese
             <input
               id="login-password"
               type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
               placeholder="Enter your password"
               autoComplete="current-password"
               required

@@ -22,7 +22,15 @@ const STYLE_DEFAULTS = {
   frameTextColor: '#0B1120'
 };
 
-const SAVED_KEY = 'qr_static_designs';
+const LEGACY_SAVED_KEY = 'qr_static_designs';
+function savedKey() {
+  try {
+    const u = JSON.parse(localStorage.getItem('qr_user') || 'null');
+    return u && u.email ? `qr_static_designs:${u.email}` : `${LEGACY_SAVED_KEY}:anon`;
+  } catch {
+    return `${LEGACY_SAVED_KEY}:anon`;
+  }
+}
 const MAX_SAVED = 12;
 const SIZE_OPTIONS = [
   { label: 'Web • 256px', value: 256 },
@@ -63,11 +71,20 @@ export default function StaticDesigner({ isPro }) {
 
   useEffect(() => {
     try {
-      const stored = JSON.parse(localStorage.getItem(SAVED_KEY) || '[]');
-      if (Array.isArray(stored)) setSavedDesigns(stored.map(item => ({
-        ...item,
-        name: item.name || 'Saved QR'
-      })));
+      const key = savedKey();
+      // migrate legacy global key into per-user key
+      try {
+        const legacy = JSON.parse(localStorage.getItem(LEGACY_SAVED_KEY) || 'null');
+        if (Array.isArray(legacy) && legacy.length) {
+          const existing = JSON.parse(localStorage.getItem(key) || '[]');
+          const merged = [...legacy, ...Array.isArray(existing) ? existing : []].slice(0, MAX_SAVED);
+          localStorage.setItem(key, JSON.stringify(merged));
+          try { localStorage.removeItem(LEGACY_SAVED_KEY); } catch(_){}
+        }
+      } catch(_){}
+
+      const stored = JSON.parse(localStorage.getItem(key) || '[]');
+      if (Array.isArray(stored)) setSavedDesigns(stored.map(item => ({ ...item, name: item.name || 'Saved QR' })));
     } catch {
       setSavedDesigns([]);
     }
@@ -154,22 +171,45 @@ export default function StaticDesigner({ isPro }) {
   };
 
   const saveDesign = () => {
-    const design = {
-      id: Date.now().toString(36),
-      createdAt: Date.now(),
-      template: tpl,
-      values: clone(values),
-      style: {
-        ...clone(style),
-        logoSizeRatio: logoSize
-      },
-      hasLogo: !!logo && isPro
-    };
-    const next = [design, ...savedDesigns].slice(0, MAX_SAVED);
-    setSavedDesigns(next);
-    localStorage.setItem(SAVED_KEY, JSON.stringify(next));
-    setToast(design.hasLogo ? 'Saved design (logo not stored for privacy).' : 'Design saved.');
-    setTimeout(() => setToast(''), 2500);
+    (async () => {
+      const design = {
+        name: designName || 'Saved QR',
+        template: tpl,
+        values: clone(values),
+        style: {
+          ...clone(style),
+          logoSizeRatio: logoSize
+        },
+        payload: buildPayload(tpl, values)
+      };
+      try {
+        const created = await api('/qr/static/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(design) });
+        if (created && created.id) {
+          setSavedDesigns(prev => [created, ...prev].slice(0, MAX_SAVED));
+          setToast('Saved to your account.');
+          setTimeout(() => setToast(''), 2500);
+          return;
+        }
+      } catch (e) {
+        // fallback to local
+      }
+      const local = {
+        id: Date.now().toString(36),
+        createdAt: Date.now(),
+        name: designName || 'Saved QR',
+        template: tpl,
+        values: clone(values),
+        style: { ...clone(style), logoSizeRatio: logoSize },
+        payload: buildPayload(tpl, values),
+        hasLogo: !!logo && isPro
+      };
+  const key = savedKey();
+  const next = [local, ...savedDesigns].slice(0, MAX_SAVED);
+  setSavedDesigns(next);
+  localStorage.setItem(key, JSON.stringify(next));
+      setToast(local.hasLogo ? 'Saved design (logo not stored for privacy).' : 'Design saved.');
+      setTimeout(() => setToast(''), 2500);
+    })();
   };
 
   const applyDesign = (design) => {
@@ -184,9 +224,17 @@ export default function StaticDesigner({ isPro }) {
   };
 
   const deleteDesign = (id) => {
-    const next = savedDesigns.filter(d => d.id !== id);
-    setSavedDesigns(next);
-    localStorage.setItem(SAVED_KEY, JSON.stringify(next));
+    (async () => {
+      try {
+        await api('/qr/static/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+        setSavedDesigns(prev => prev.filter(d => d.id !== id));
+        return;
+      } catch (e) {
+        const next = savedDesigns.filter(d => d.id !== id);
+        setSavedDesigns(next);
+        localStorage.setItem(savedKey(), JSON.stringify(next));
+      }
+    })();
   };
 
   return (

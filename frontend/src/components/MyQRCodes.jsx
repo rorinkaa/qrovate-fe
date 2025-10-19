@@ -4,7 +4,16 @@ import { api, API } from '../api';
 import { buildPayload } from './TemplateDataForm.jsx';
 import { renderStyledQR } from '../lib/styledQr';
 
-const STATIC_SAVE_KEY = 'qr_static_designs';
+// localStorage key per-user to avoid leaking designs between accounts
+const LEGACY_STATIC_KEY = 'qr_static_designs';
+function staticSaveKey() {
+  try {
+    const u = JSON.parse(localStorage.getItem('qr_user') || 'null');
+    return u && u.email ? `qr_static_designs:${u.email}` : `${LEGACY_STATIC_KEY}:anon`;
+  } catch {
+    return `${LEGACY_STATIC_KEY}:anon`;
+  }
+}
 const STATIC_STYLE_DEFAULTS = {
   size: 320,
   background: '#ffffff',
@@ -44,12 +53,36 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
       setStaticDesigns([]);
       return;
     }
-    try {
-      const stored = JSON.parse(localStorage.getItem(STATIC_SAVE_KEY) || '[]');
-      setStaticDesigns(Array.isArray(stored) ? stored : []);
-    } catch {
-      setStaticDesigns([]);
-    }
+    (async () => {
+      try {
+        // Try server-side list first
+        const server = await api('/qr/static/list');
+        if (Array.isArray(server)) {
+          setStaticDesigns(server);
+          return;
+        }
+      } catch (e) {
+        // fallback to localStorage (per-user key). Also migrate legacy global key if present.
+      }
+      try {
+        const key = staticSaveKey();
+        // migrate legacy global key into per-user key if needed
+        try {
+          const legacy = JSON.parse(localStorage.getItem(LEGACY_STATIC_KEY) || 'null');
+          if (Array.isArray(legacy) && legacy.length) {
+            const existing = JSON.parse(localStorage.getItem(key) || '[]');
+            const merged = [...legacy, ...Array.isArray(existing) ? existing : []].slice(0, 100);
+            localStorage.setItem(key, JSON.stringify(merged));
+            try { localStorage.removeItem(LEGACY_STATIC_KEY); } catch(_){}
+          }
+        } catch(_){}
+
+        const stored = JSON.parse(localStorage.getItem(key) || '[]');
+        setStaticDesigns(Array.isArray(stored) ? stored : []);
+      } catch {
+        setStaticDesigns([]);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -76,11 +109,21 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
   }, [version]);
 
   const handleDeleteStatic = useCallback((id) => {
-    const next = staticDesigns.filter(design => design.id !== id);
-    setStaticDesigns(next);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STATIC_SAVE_KEY, JSON.stringify(next));
-    }
+    (async () => {
+      // prefer server delete when possible
+      try {
+        await api('/qr/static/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+        setStaticDesigns(prev => prev.filter(d => d.id !== id));
+        return;
+      } catch (e) {
+        // fallback to local deletion
+      }
+      const next = staticDesigns.filter(design => design.id !== id);
+      setStaticDesigns(next);
+      if (typeof window !== 'undefined') {
+        try { localStorage.setItem(staticSaveKey(), JSON.stringify(next)); } catch(_){}
+      }
+    })();
   }, [staticDesigns]);
 
   const onStartStatic = () => onCreateNew?.({ type: 'static-new', codeId: null });
