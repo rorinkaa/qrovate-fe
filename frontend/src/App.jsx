@@ -30,6 +30,10 @@ export default function App(){
   const [resendBusy, setResendBusy] = useState(false);
   const [builderConfig, setBuilderConfig] = useState(null);
   const [codesVersion, setCodesVersion] = useState(0);
+  const scrollToTop = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
   const setView = useCallback((nextView) => {
     setViewRaw(nextView);
     if (nextView !== 'builder') {
@@ -44,6 +48,9 @@ export default function App(){
     setDashboardAlert(null);
     setView('builder');
   };
+  useEffect(() => {
+    scrollToTop();
+  }, [view, scrollToTop]);
 
   useEffect(()=>{
     const raw = localStorage.getItem('qr_user');
