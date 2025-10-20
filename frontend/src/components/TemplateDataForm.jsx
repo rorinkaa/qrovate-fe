@@ -101,6 +101,33 @@ export const TEMPLATE_LIBRARY = [
     accentSoft: 'rgba(139, 92, 246, 0.18)'
   },
   {
+    id: 'PDF',
+    title: 'PDF Document',
+    description: 'Link to a PDF file for download or view.',
+    icon: '📄',
+    category: 'content',
+    accent: '#dc2626',
+    accentSoft: 'rgba(220, 38, 38, 0.18)'
+  },
+  {
+    id: 'MP3',
+    title: 'Audio File',
+    description: 'Link to an MP3 or audio file.',
+    icon: '🎵',
+    category: 'content',
+    accent: '#7c3aed',
+    accentSoft: 'rgba(124, 58, 237, 0.16)'
+  },
+  {
+    id: 'Voucher',
+    title: 'Discount Voucher',
+    description: 'Share a promo code or voucher details.',
+    icon: '🎟️',
+    category: 'content',
+    accent: '#f59e0b',
+    accentSoft: 'rgba(245, 158, 11, 0.18)'
+  },
+  {
     id: 'Crypto',
     title: 'Crypto payment',
     description: 'Request BTC, ETH, or other crypto payments.',
@@ -171,6 +198,9 @@ export const TEMPLATE_DEFAULTS = {
   WiFi: { ssid: '', password: '', auth: 'WPA', hidden: false },
   Event: { summary: '', start: '', end: '', location: '', description: '' },
   Vcard: { first: '', last: '', title: '', org: '', email: '', phone: '', address: '', url: '' },
+  PDF: { url: '' },
+  MP3: { url: '' },
+  Voucher: { code: '', description: '', expiry: '' },
   Crypto: { symbol: 'BTC', address: '', amount: '' },
   PayPal: { username: '', amount: '' },
   'UPI Payment': { vpa: '', name: '', amount: '' },
@@ -261,6 +291,14 @@ export function buildPayload(type, v = {}) {
         `URL:${url}`,
         'END:VCARD'
       ].join('\n');
+    }
+    case 'PDF':
+      return normalizeUrl(v.url || '');
+    case 'MP3':
+      return normalizeUrl(v.url || '');
+    case 'Voucher': {
+      const { code = '', description = '', expiry = '' } = v;
+      return `Voucher Code: ${code}\nDescription: ${description}\nExpires: ${expiry}`;
     }
     case 'Crypto': {
       const scheme = (v.symbol || 'BTC').toLowerCase();
@@ -471,6 +509,32 @@ export function TemplateDataForm({ type, values, onChange }) {
           </Field>
           <Field label="Website">
             <input value={values.url || ''} onChange={e => onChange('url', e.target.value)} placeholder="https://example.com" />
+          </Field>
+        </>
+      );
+    case 'PDF':
+      return (
+        <Field label="PDF URL">
+          <input value={values.url || ''} onChange={e => onChange('url', e.target.value)} placeholder="https://example.com/document.pdf" />
+        </Field>
+      );
+    case 'MP3':
+      return (
+        <Field label="Audio URL">
+          <input value={values.url || ''} onChange={e => onChange('url', e.target.value)} placeholder="https://example.com/audio.mp3" />
+        </Field>
+      );
+    case 'Voucher':
+      return (
+        <>
+          <Field label="Voucher Code">
+            <input value={values.code || ''} onChange={e => onChange('code', e.target.value)} placeholder="SUMMER2024" />
+          </Field>
+          <Field label="Description">
+            {multilineTextarea(values.description || '', e => onChange('description', e.target.value), '20% off your next purchase')}
+          </Field>
+          <Field label="Expiry Date">
+            <input type="date" value={values.expiry || ''} onChange={e => onChange('expiry', e.target.value)} />
           </Field>
         </>
       );

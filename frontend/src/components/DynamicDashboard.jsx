@@ -108,6 +108,9 @@ const TEMPLATE_META = {
   WiFi: { emoji: '📶', title: 'Wi‑Fi login', description: 'Share SSID and password without typing.' },
   Vcard: { emoji: '👤', title: 'Contact card', description: 'Save your profile to phone contacts.' },
   Whatsapp: { emoji: '💬', title: 'WhatsApp chat', description: 'Start a conversation with your team.' },
+  PDF: { emoji: '📄', title: 'PDF Document', description: 'Link to a PDF file for download or view.' },
+  MP3: { emoji: '🎵', title: 'Audio File', description: 'Link to an MP3 or audio file.' },
+  Voucher: { emoji: '🎟️', title: 'Discount Voucher', description: 'Share a promo code or voucher details.' },
   PIX: { emoji: '💱', title: 'PIX payment', description: 'Collect payments via Brazil’s PIX system.' }
 };
 
@@ -142,6 +145,17 @@ function destinationSummary(type, values) {
     }
     case 'Event': {
       return values.summary ? `Calendar event: ${values.summary}` : 'Add event details for calendars.';
+    }
+    case 'PDF': {
+      const url = (values.url || '').trim();
+      return url ? normalizeUrl(url) : 'Add a PDF URL.';
+    }
+    case 'MP3': {
+      const url = (values.url || '').trim();
+      return url ? normalizeUrl(url) : 'Add an audio URL.';
+    }
+    case 'Voucher': {
+      return values.code ? `Voucher: ${values.code}` : 'Add voucher details.';
     }
     default:
       return 'Destination configured in the previous step.';

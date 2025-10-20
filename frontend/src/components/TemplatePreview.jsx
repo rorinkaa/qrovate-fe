@@ -305,6 +305,69 @@ function describeTemplate(type, values) {
         tip: 'Works with Brazilian PIX-compliant apps.'
       });
     }
+    case 'PDF': {
+      const url = values.url || '';
+      const host = cleanHost(url);
+      return finalize({
+        eyebrow: 'PDF Document',
+        title: url ? `📄 ${host}` : 'PDF Download',
+        subtitle: 'Tap to download or view the document.',
+        body: url ? `Download PDF from ${host}` : 'Add a PDF URL to see it here.',
+        inlineSummary: url ? `PDF from ${host}` : 'Add PDF URL.',
+        tip: 'Opens the PDF in the browser or downloads it.'
+      });
+    }
+    case 'MP3': {
+      const url = values.url || '';
+      const host = cleanHost(url);
+      return finalize({
+        eyebrow: 'Audio File',
+        title: url ? `🎵 ${host}` : 'Audio Player',
+        subtitle: 'Tap to play the audio file.',
+        body: (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{
+              background: '#f1f5f9',
+              borderRadius: 12,
+              padding: '16px',
+              textAlign: 'center',
+              color: '#475569'
+            }}>
+              <div style={{ fontSize: 24, marginBottom: 8 }}>🎵</div>
+              <div style={{ fontWeight: 600 }}>Audio Player</div>
+              <div style={{ fontSize: 14 }}>Tap play to listen</div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+              <button style={{
+                background: accent,
+                color: 'white',
+                border: 'none',
+                borderRadius: 20,
+                padding: '8px 16px',
+                fontSize: 14,
+                cursor: 'pointer'
+              }}>⏯️ Play</button>
+            </div>
+          </div>
+        ),
+        inlineSummary: url ? `Audio from ${host}` : 'Add audio URL.',
+        tip: 'Plays the MP3 directly in the browser.'
+      });
+    }
+    case 'VOUCHER': {
+      const code = values.code || 'SUMMER2024';
+      const description = values.description || '20% off your next purchase';
+      const expiry = values.expiry ? formatDateTime(values.expiry) : 'No expiry';
+      return finalize({
+        eyebrow: 'Discount Voucher',
+        title: code,
+        subtitle: description,
+        body: `Expires: ${expiry}`,
+        highlight: `Code: ${code}`,
+        inlineSummary: `${code} • ${description}`,
+        tip: 'Copy the code or save for later use.'
+      });
+    }
     default: {
       const url = values.url || '';
       const brand = pickBrand(url);
