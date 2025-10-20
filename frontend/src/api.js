@@ -1,14 +1,34 @@
 // src/api.js
-export const API = import.meta.env.VITE_API_URL || "https://qrovate.onrender.com";
+// Prefer explicit VITE_API_URL, otherwise use localhost in dev, production host in prod
+const DEFAULT_API = import.meta.env.VITE_API_URL
+  || (import.meta.env.DEV ? 'http://localhost:4000' : 'https://qrovate.onrender.com');
+export const API = DEFAULT_API;
 
-/** Read token from the places your app uses */
+function apiHostKey() {
+  try {
+    const url = new URL(API);
+    // use host (hostname:port) as namespace
+    return url.host.replace(/[:\/\.@]/g, '_');
+  } catch {
+    return 'default';
+  }
+}
+
+/** Read token from namespaced storage (avoid mixing prod/dev tokens) */
 function readToken() {
+  const ns = apiHostKey();
+  // 1) namespaced token key
+  const directNamespaced = localStorage.getItem(`token@${ns}`);
+  if (directNamespaced) return directNamespaced;
+
+  // 2) legacy global token
   const direct = localStorage.getItem('token');
   if (direct) return direct;
 
+  // 3) namespaced qr_user
   try {
-    const u = JSON.parse(localStorage.getItem('qr_user') || 'null');
-    // support common keys
+    const raw = localStorage.getItem(`qr_user@${ns}`) || localStorage.getItem('qr_user') || 'null';
+    const u = JSON.parse(raw);
     return u?.token || u?.jwt || null;
   } catch {
     return null;
@@ -41,7 +61,8 @@ export async function api(path, opts = {}) {
     else if (payload?.message) message = payload.message;
 
     if (res.status === 401) {
-      // clear stale token, keep a clean state
+      // clear stale token for this API host and legacy key
+      try { const ns = apiHostKey(); localStorage.removeItem(`token@${ns}`); } catch(_){}
       localStorage.removeItem('token');
       // NOTE: we don't force-redirect; UI can handle it gracefully
     }

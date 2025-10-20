@@ -210,16 +210,31 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
     (async () => {
       try {
         const list = await api('/qr/list');
-        const normalized = (list || []).map(it => ({
-          ...it,
-          style: it.style || null
-        }));
-        setItems(normalized);
-        if (isFreshFlow || !normalized.length) {
-          setSel(null);
-          setQrName(normalizeFlow(initialType) === 'static' ? 'New static QR' : 'New dynamic QR');
-        }
-        setErr('');
+        const normalized = Array.isArray(list) ? list.map(it => ({ ...it, style: it.style || null })) : [];
+        setItems(prev => {
+          // if server returned a non-empty list, use it
+          if (Array.isArray(list) && list.length > 0) {
+            // ensure selection stays consistent when possible
+            if (isFreshFlow || !normalized.length) {
+              setSel(null);
+              setQrName(normalizeFlow(initialType) === 'static' ? 'New static QR' : 'New dynamic QR');
+            }
+            setErr('');
+            return normalized;
+          }
+          // server returned an empty list but we already have items locally -> keep them
+          if (Array.isArray(list) && list.length === 0 && prev && prev.length > 0) {
+            setErr('Server returned an empty list — keeping locally cached items.');
+            return prev;
+          }
+          // fallback: replace with whatever normalized value is (likely empty)
+          if (isFreshFlow || !normalized.length) {
+            setSel(null);
+            setQrName(normalizeFlow(initialType) === 'static' ? 'New static QR' : 'New dynamic QR');
+          }
+          setErr('');
+          return normalized;
+        });
       } catch (e) {
         setErr('Failed to load your dynamic QR codes');
       }

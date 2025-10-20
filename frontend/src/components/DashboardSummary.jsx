@@ -1,6 +1,7 @@
 import React from 'react';
 import GlassCard from './ui/GlassCard.jsx';
 import SectionHeading from './ui/SectionHeading.jsx';
+import RecentCard from './RecentCard.jsx';
 
 function HeroIllustration() {
   return (
@@ -37,7 +38,7 @@ function HeroIllustration() {
   );
 }
 
-export default function DashboardSummary({ user, onCreateNew, onOpenCodes }) {
+export default function DashboardSummary({ user, onCreateNew, onOpenCodes, lastCreated = null }) {
   const verified = user.email_verified !== false;
   const name = user.email.split('@')[0] || 'there';
   const planLabel = user.is_pro ? 'Pro plan active' : `Free plan · ${user.trial_days_left} days left`;
@@ -77,27 +78,33 @@ export default function DashboardSummary({ user, onCreateNew, onOpenCodes }) {
     <div className="dashboard-summary">
       <div className="dashboard-summary-grid">
         <GlassCard className="summary-hero dashboard-animate" style={{ '--delay': '0s' }}>
-          <div>
-            <div className="hero-copy">
-              <SectionHeading
-                eyebrow="Workspace overview"
-                title={`Welcome back, ${name}!`}
-                subtitle="Everything you launch from here is tracked, branded, and ready to update without reprinting."
-              />
-              <div className="summary-actions">
-                <button
-                  className="btn-primary"
-                  onClick={()=>onCreateNew?.({ type: 'dynamic-new', codeId: null })}
-                >
-                  Create dynamic QR
-                </button>
-                <button
-                  className="btn-secondary ghost"
-                  onClick={()=>onCreateNew?.({ type: 'static-new', codeId: null })}
-                >
-                  Open static studio
-                </button>
+          <div style={{display:'flex',gap:16,alignItems:'center',justifyContent:'space-between',flexWrap:'wrap'}}>
+            <div style={{flex:'1 1 420px',minWidth:0}}>
+              <div className="hero-copy">
+                <SectionHeading
+                  eyebrow="Workspace overview"
+                  title={`Welcome back, ${name}!`}
+                  subtitle="Everything you launch from here is tracked, branded, and ready to update without reprinting."
+                />
+                <div className="summary-actions">
+                  <button
+                    className="btn-primary"
+                    onClick={()=>onCreateNew?.({ type: 'dynamic-new', codeId: null })}
+                  >
+                    Create dynamic QR
+                  </button>
+                  <button
+                    className="btn-secondary ghost"
+                    onClick={()=>onCreateNew?.({ type: 'static-new', codeId: null })}
+                  >
+                    Open static studio
+                  </button>
+                </div>
               </div>
+            </div>
+
+            <div style={{flex:'0 0 320px'}}>
+              <RecentCard item={lastCreated} onEdit={(it)=>onCreateNew?.({ type: it.template ? 'static-edit' : 'dynamic-edit', codeId: it.id })} />
             </div>
           </div>
         </GlassCard>

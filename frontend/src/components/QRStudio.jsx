@@ -129,18 +129,21 @@ export default function QRStudio({ user }) {
   const [loading, setLoading] = useState(false);
 
   // Dynamic management
-  // derive a per-user key for local drafts; fallback to 'anon' when no user
-  const userKey = (user && user.email) ? `qrovate_dynamic_items:${user.email}` : 'qrovate_dynamic_items:anon';
+  // derive a per-user key for local drafts; when logged in we avoid local persistence
+  const isAnon = !(user && user.email);
+  const userKey = isAnon ? 'qrovate_dynamic_items:anon' : null;
   const loadDynForUser = () => {
+    if (!isAnon) return [];
     try { return JSON.parse(localStorage.getItem(userKey) || '[]'); }
     catch { return []; }
   };
-  const saveDynForUser = (arr) => localStorage.setItem(userKey, JSON.stringify(arr));
+  const saveDynForUser = (arr) => { if (!isAnon) return; localStorage.setItem(userKey, JSON.stringify(arr)); };
   const [dynList, setDynList] = useState(() => loadDynForUser()); // [{id, name, template, values, target}]
   const [current, setCurrent] = useState(null);       // currently selected dynamic
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+  const [guestModal, setGuestModal] = useState(null); // { url, token, id }
 
   const { errors } = useValidation(tpl, values);
 
@@ -180,7 +183,7 @@ export default function QRStudio({ user }) {
     // Migrate any legacy global drafts into per-user storage to avoid cross-account leaks
     try {
       const legacy = localStorage.getItem('qrovate_dynamic_items');
-      if (legacy) {
+      if (legacy && isAnon) {
         const parsed = JSON.parse(legacy || '[]');
         const existing = loadDynForUser();
         const merged = Array.isArray(parsed) ? [...parsed, ...existing] : existing;
@@ -202,6 +205,19 @@ export default function QRStudio({ user }) {
     setDynList(loadDynForUser());
   }, [userKey]);
 
+  const claimGuestIfPresent = async () => {
+    if (!user || !user.email) return;
+    try{
+      const raw = localStorage.getItem('qr_guest_claim');
+      if (!raw) return;
+      const obj = JSON.parse(raw);
+      if (!obj || !obj.token) return;
+      await api('/auth/claim', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ token: obj.token }) });
+      localStorage.removeItem('qr_guest_claim');
+      setMsg('Guest items claimed to your account. Please Sync now to refresh the list.');
+    }catch(e){ setErr(e.message || 'Claim failed'); }
+  };
+
   async function createDynamic() {
     setErr(''); setMsg(''); setBusy(true);
     try{
@@ -209,14 +225,34 @@ export default function QRStudio({ user }) {
       const target = makeDynamicTarget(tpl, values);            // ensures URL types get https://; others go to payload.html
       if (!target) throw new Error('Please fill required fields');
 
+      if (!user || !user.email) {
+        // anonymous: create guest on server and show modal with claim link
+        try{
+          const res = await fetch(`${API}/qr/create-guest`, {
+            method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ target })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data?.error || 'Guest create failed');
+          const item = { id: data.id, name, template: tpl, values: { ...values }, target: data.target, claimToken: data.claimToken };
+          // save claim token locally so user can claim later
+          try{ localStorage.setItem('qr_guest_claim', JSON.stringify({ token: data.claimToken, createdAt: Date.now(), id: data.id })); }catch(e){}
+          const updated = [item, ...dynList]; setDynList(updated); if (isAnon) saveDynForUser(updated);
+          setCurrent(item); setGuestModal({ url: `${API}/qr/${data.id}`, token: data.claimToken, id: data.id });
+          setMsg('Guest dynamic created. Save to your account to keep it permanently.');
+        }catch(e){ setErr(e.message || 'Failed to create guest'); }
+        return null;
+      }
+
+      // authenticated flow
       const res = await api('/qr/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target })
       });
       const item = { id: res.id, name, template: tpl, values: { ...values }, target: res.target };
-  const updated = [item, ...dynList];
-  setDynList(updated); saveDynForUser(updated);
+      const updated = [item, ...dynList];
+      setDynList(updated);
+      if (isAnon) saveDynForUser(updated);
       setCurrent(item);
       setMsg('Dynamic created.');
     }catch(e){ setErr(e.message || 'Failed to create'); }
@@ -227,6 +263,11 @@ export default function QRStudio({ user }) {
     if (!current?.id) return;
     setErr(''); setMsg(''); setBusy(true);
     try{
+      if (!user || !user.email) {
+        setErr('Login required to update dynamic codes on the server.');
+        setBusy(false);
+        return;
+      }
       const target = makeDynamicTarget(tpl, values);
       const res = await api('/qr/update', {
         method: 'POST',
@@ -235,7 +276,8 @@ export default function QRStudio({ user }) {
       });
       // update local snapshot
   const updated = dynList.map(d => d.id === current.id ? { ...d, template: tpl, values: { ...values }, target: res.target } : d);
-  setDynList(updated); saveDynForUser(updated);
+  setDynList(updated);
+  if (isAnon) saveDynForUser(updated);
       setCurrent(updated.find(d => d.id === current.id));
       setMsg('Dynamic updated.');
     }catch(e){ setErr(e.message || 'Failed to update'); }
@@ -252,16 +294,47 @@ export default function QRStudio({ user }) {
 
   function renameDynamic(d){
     const name = prompt('Rename dynamic:', d.name) || d.name;
-  const updated = dynList.map(x => x.id === d.id ? { ...x, name } : x);
-  setDynList(updated); saveDynForUser(updated);
-    setCurrent({ ...d, name });
+    if (!user || !user.email) {
+      const updated = dynList.map(x => x.id === d.id ? { ...x, name } : x);
+      setDynList(updated); saveDynForUser(updated);
+      setCurrent({ ...d, name });
+      return;
+    }
+    // persist rename on server when logged in
+    (async ()=>{
+      try {
+        setBusy(true); setErr(''); setMsg('');
+        await api('/qr/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: d.id, name }) });
+        const updated = dynList.map(x => x.id === d.id ? { ...x, name } : x);
+        setDynList(updated);
+        setCurrent({ ...d, name });
+        setMsg('Renamed on server.');
+      } catch (e) {
+        setErr(e.message || 'Rename failed');
+      } finally { setBusy(false); }
+    })();
   }
 
   function deleteDynamic(d){
-    if(!confirm('Delete this dynamic locally? (The backend QR id remains, but it will disappear from this list.)')) return;
-  const updated = dynList.filter(x => x.id !== d.id);
-  setDynList(updated); saveDynForUser(updated);
-    if(current?.id === d.id){ setCurrent(null); setMsg('Removed from local list.'); }
+    if(!confirm('Delete this dynamic? This will remove it from your local list and the server when logged in.')) return;
+    if (!user || !user.email) {
+      const updated = dynList.filter(x => x.id !== d.id);
+      setDynList(updated); saveDynForUser(updated);
+      if(current?.id === d.id){ setCurrent(null); setMsg('Removed from local list.'); }
+      return;
+    }
+    (async ()=>{
+      try {
+        setBusy(true); setErr(''); setMsg('');
+        await api('/qr/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: d.id }) });
+        const updated = dynList.filter(x => x.id !== d.id);
+        setDynList(updated);
+        if(current?.id === d.id){ setCurrent(null); }
+        setMsg('Deleted from server.');
+      } catch (e) {
+        setErr(e.message || 'Failed to delete');
+      } finally { setBusy(false); }
+    })();
   }
 
   /* ----- UI ----- */
@@ -311,6 +384,12 @@ export default function QRStudio({ user }) {
             <button onClick={updateDynamic} disabled={busy || !current?.id}>Update Dynamic</button>
           </div>
 
+          {isAnon && (
+            <div style={{background:'#fff4e5', padding:10, borderRadius:6, marginTop:8}}>
+              <strong>Login recommended</strong>: Dynamic QR codes created while logged out are stored only in your browser. Log in to save them to your account and access from any device.
+            </div>
+          )}
+
           {/* Preview of current dynamic (if any) */}
           {current?.id && (
             <div className="row" style={{ alignItems:'center', gap:12 }}>
@@ -333,7 +412,21 @@ export default function QRStudio({ user }) {
 
           {/* Local list of saved dynamics */}
           <div style={{marginTop:8}}>
-            <div style={{fontWeight:600, marginBottom:4}}>My dynamic codes</div>
+            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:4}}>
+              <div style={{fontWeight:600}}>My dynamic codes</div>
+              <div>
+                <button onClick={async ()=>{
+                  setErr(''); setBusy(true);
+                  try{
+                    const list = await api('/qr/list');
+                    const normalized = Array.isArray(list) ? list.map(it => ({ ...it, style: it.style || null })) : [];
+                    setDynList(normalized);
+                    setMsg(`Synced ${normalized.length} items from server.`);
+                  }catch(e){ setErr(e.message || 'Sync failed'); }
+                  finally{ setBusy(false); }
+                }} className="btn-secondary" style={{marginLeft:8}} disabled={busy}>Sync now</button>
+              </div>
+            </div>
             {dynList.length === 0 ? (
               <div style={{color:'#666'}}>No dynamic items yet.</div>
             ) : (
@@ -353,6 +446,28 @@ export default function QRStudio({ user }) {
           </div>
 
           {msg && <div style={{ color:'#0a7' }}>{msg}</div>}
+          {(user && user.email && localStorage.getItem('qr_guest_claim')) && (
+            <div style={{marginTop:8}}>
+              <button onClick={claimGuestIfPresent} className="btn-primary">Save guest items to my account</button>
+            </div>
+          )}
+          {guestModal && (
+            <div style={{position:'fixed', left:0, top:0, right:0, bottom:0, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.4)'}}>
+              <div style={{background:'#fff', padding:20, borderRadius:8, width:520, maxWidth:'90%'}}>
+                <h3>Guest QR created</h3>
+                <p>This QR is available temporarily. Save it to your account to keep it permanently.</p>
+                <div style={{marginBottom:10}}>
+                  <div style={{fontSize:12, color:'#666'}}>Link</div>
+                  <input readOnly value={guestModal.url} style={{width:'100%'}} />
+                </div>
+                <div style={{display:'flex', gap:8}}>
+                  <button onClick={()=>{ navigator.clipboard?.writeText(guestModal.url); setMsg('Link copied to clipboard'); }}>Copy link</button>
+                  <button onClick={()=>{ window.location.href = `mailto:?subject=Try my QR&body=Open this link: ${guestModal.url}`; }}>Email link</button>
+                  <button onClick={()=>{ setGuestModal(null); }}>Close</button>
+                </div>
+              </div>
+            </div>
+          )}
           {err && <div style={{ color:'#d33' }}>{err}</div>}
         </>
       )}

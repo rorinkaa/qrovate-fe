@@ -41,6 +41,7 @@ export default function App(){
   const [resendBusy, setResendBusy] = useState(false);
   const [builderConfig, setBuilderConfig] = useState(null);
   const [codesVersion, setCodesVersion] = useState(0);
+  const [lastCreated, setLastCreated] = useState(null);
   const [cookieConsent, setCookieConsent] = useState(() => {
     if (typeof window === 'undefined') return 'unknown';
     return localStorage.getItem(COOKIE_KEY) || 'unknown';
@@ -132,6 +133,46 @@ export default function App(){
       verifyEmailToken(verify);
     }
   }, []);
+
+  // load most recent QR for the dashboard summary (used by RecentCard)
+  useEffect(() => {
+    if (!user) {
+      setLastCreated(null);
+      return;
+    }
+    let ignore = false;
+    (async () => {
+      try {
+        // debug: surface token presence to console to help diagnose missing codes
+        const token = localStorage.getItem('token') || (() => { try { const u=JSON.parse(localStorage.getItem('qr_user')||'null'); return u?.token||u?.jwt||null } catch { return null } })();
+        console.debug('Dashboard: fetch recent QR list (token present?):', !!token);
+        const list = await api('/qr/list');
+        console.debug('Dashboard: /qr/list returned', Array.isArray(list) ? list.length : typeof list, 'items');
+        if (ignore) return;
+        if (Array.isArray(list) && list.length) {
+          const sorted = list.slice().sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+          setLastCreated(sorted[0]);
+          // clear any previous dashboard notice about missing codes
+          setDashboardAlert(null);
+        } else {
+          setLastCreated(null);
+          // surface a helpful hint so the user knows why their codes might be missing
+          setDashboardAlert({ type: 'info', text: 'No dynamic codes found for this account. Check that you are logged in with the same account you used to create codes or re-login.' });
+        }
+      } catch (e) {
+        if (!ignore) {
+          setLastCreated(null);
+          // friendly explanation when auth fails
+          if (e.status === 401) {
+            setDashboardAlert({ type: 'error', text: 'Session expired or unauthorized. Please sign in again to see your dynamic codes.' });
+          } else {
+            setDashboardAlert({ type: 'error', text: e.message || 'Could not load your QR list. Check network or API.' });
+          }
+        }
+      }
+    })();
+    return () => { ignore = true; };
+  }, [user, codesVersion]);
 
   function clearAuthParams(keys = ['reset','verify']){
     if (typeof window === 'undefined') return;
@@ -424,6 +465,7 @@ export default function App(){
                   user={user}
                   onCreateNew={openBuilder}
                   onOpenCodes={() => setView('codes')}
+                  lastCreated={lastCreated}
                 />
               )}
               {view==='codes' && (

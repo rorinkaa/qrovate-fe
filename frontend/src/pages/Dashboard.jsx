@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api, API } from '../api';
+import DashboardSummary from '../components/DashboardSummary.jsx';
 
 // ---- helpers ----
 const normalizeUrl = (u) => /^https?:\/\//i.test(u || '') ? u : (u ? `https://${u}` : '');
@@ -66,10 +67,19 @@ export default function Dashboard() {
   useEffect(()=>{
     (async ()=>{
       try {
-        // if your backend doesn’t have it yet, temporarily comment the next line
+        // if your backend doesnt have it yet, temporarily comment the next line
         const list = await api('/qr/list'); // expect array [{id, target, ...}]
-        setItems(list || []);
-        if(list?.length){ setSel(list[0]); }
+        if (Array.isArray(list) && list.length > 0) {
+          setItems(list);
+          setSel(list[0]);
+        } else {
+          // If server returned empty but we already have local items, preserve them
+          const prev = items || [];
+          if (!prev.length && Array.isArray(list) && list.length === 0) {
+            setItems([]);
+          }
+          // otherwise, keep existing items (do not wipe out when server returns empty)
+        }
       } catch(e){ setErr(e.message || 'Failed to load'); }
     })();
   },[]);
@@ -103,9 +113,13 @@ export default function Dashboard() {
     finally{ setSaving(false); }
   }
 
+  // compute last created (newest) item if present
+  const lastCreated = items && items.length ? items.slice().sort((a,b)=> (b.createdAt||0) - (a.createdAt||0))[0] : null;
+
   return (
     <section className="card" style={{display:'grid', gap:12}}>
       <div className="label">Dynamic QR settings</div>
+      <DashboardSummary lastCreated={lastCreated} />
 
       <div style={{display:'grid', gridTemplateColumns:'260px 1fr', gap:16}}>
         <div style={{borderRight:'1px solid #eee', paddingRight:12}}>
@@ -121,7 +135,7 @@ export default function Dashboard() {
                   onClick={()=>setSel(it)}
                   style={{justifyContent:'flex-start'}}
                 >
-                  {it.id.slice(0,8)}…
+                  {it.id.slice(0,8)}
                 </button>
               ))}
             </div>
@@ -142,7 +156,7 @@ export default function Dashboard() {
               <TemplateFields type={tpl} values={values} onChange={(k,v)=>setValues(s=>({...s,[k]:v}))} />
 
               <div className="row" style={{gap:8, marginTop:8}}>
-                <button onClick={saveChanges} disabled={saving}>{saving?'Saving…':'Save'}</button>
+                <button onClick={saveChanges} disabled={saving}>{saving?'Saving':'Save'}</button>
                 <a href={`${API}/qr/${sel.id}`} target="_blank" rel="noreferrer">Open</a>
                 <img
                   src={`${API}/qr/svg/${sel.id}`}

@@ -397,6 +397,32 @@ button[disabled] {
   gap: 12px;
   align-items: center;
 }
+/* Recent card (dashboard hero) */
+.recent-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.recent-card.empty {
+  color: rgba(248,250,252,0.8);
+  font-size: 14px;
+}
+.recent-preview { flex: 0 0 72px; width:72px; height:72px; border-radius:10px; overflow:hidden; background:#fff; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.08); }
+.recent-preview img { width:100%; height:100%; object-fit:contain; display:block; }
+.recent-placeholder { font-size:12px; color:rgba(15,23,42,0.7); padding:6px; }
+.recent-body { flex:1 1 auto; min-width:0; }
+.recent-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.recent-meta { min-width:0; }
+.recent-name { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#fff; }
+.recent-sub { font-size:12px; color:rgba(248,250,252,0.8); }
+.recent-actions { display:flex; gap:8px; align-items:center; }
+.recent-card .icon-button { background: rgba(255,255,255,0.08); color: #fff; border-color: rgba(255,255,255,0.12); }
+.recent-card .icon-button:hover { background: rgba(255,255,255,0.12); }
+.recent-card .btn-secondary.small { padding: 8px 10px; border-radius: 10px; font-size:13px; }
 .summary-hero.compact {
   gap: 18px;
 }
