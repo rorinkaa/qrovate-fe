@@ -27,13 +27,26 @@ function writeQueue(q) {
 }
 
 export function addToQueue(item) {
-  const q = readQueue();
-  const existing = q.find(i => i.id === item.id);
-  if (existing) return;
-  q.push({ id: item.id, payload: item, attempts: 0, createdAt: Date.now() });
-  writeQueue(q);
-  // kick off processing
-  processQueue();
+  // Skip queueing if we can save directly to server
+  (async () => {
+    try {
+      const created = await api('/qr/static/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item) });
+      if (created && created.id) {
+        // Successfully saved to server, no need to queue
+        return;
+      }
+    } catch (e) {
+      // Server failed, fall back to queue
+    }
+    // Add to queue as fallback
+    const q = readQueue();
+    const existing = q.find(i => i.id === item.id);
+    if (existing) return;
+    q.push({ id: item.id, payload: item, attempts: 0, createdAt: Date.now() });
+    writeQueue(q);
+    // kick off processing
+    processQueue();
+  })();
 }
 
 export function onItemSynced(cb) {

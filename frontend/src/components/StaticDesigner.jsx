@@ -70,24 +70,35 @@ export default function StaticDesigner({ isPro }) {
   const [toast, setToast] = useState('');
 
   useEffect(() => {
-    try {
-      const key = savedKey();
-      // migrate legacy global key into per-user key
+    // Load designs from server on mount
+    (async () => {
       try {
-        const legacy = JSON.parse(localStorage.getItem(LEGACY_SAVED_KEY) || 'null');
-        if (Array.isArray(legacy) && legacy.length) {
-          const existing = JSON.parse(localStorage.getItem(key) || '[]');
-          const merged = [...legacy, ...Array.isArray(existing) ? existing : []].slice(0, MAX_SAVED);
-          localStorage.setItem(key, JSON.stringify(merged));
-          try { localStorage.removeItem(LEGACY_SAVED_KEY); } catch(_){}
+        const serverDesigns = await api('/qr/static/list');
+        if (Array.isArray(serverDesigns)) {
+          setSavedDesigns(serverDesigns.map(item => ({ ...item, name: item.name || 'Saved QR' })));
         }
-      } catch(_){}
+      } catch (e) {
+        // Fallback to localStorage if server fails
+        try {
+          const key = savedKey();
+          // migrate legacy global key into per-user key
+          try {
+            const legacy = JSON.parse(localStorage.getItem(LEGACY_SAVED_KEY) || 'null');
+            if (Array.isArray(legacy) && legacy.length) {
+              const existing = JSON.parse(localStorage.getItem(key) || '[]');
+              const merged = [...legacy, ...Array.isArray(existing) ? existing : []].slice(0, MAX_SAVED);
+              localStorage.setItem(key, JSON.stringify(merged));
+              try { localStorage.removeItem(LEGACY_SAVED_KEY); } catch(_){}
+            }
+          } catch(_){}
 
-      const stored = JSON.parse(localStorage.getItem(key) || '[]');
-      if (Array.isArray(stored)) setSavedDesigns(stored.map(item => ({ ...item, name: item.name || 'Saved QR' })));
-    } catch {
-      setSavedDesigns([]);
-    }
+          const stored = JSON.parse(localStorage.getItem(key) || '[]');
+          if (Array.isArray(stored)) setSavedDesigns(stored.map(item => ({ ...item, name: item.name || 'Saved QR' })));
+        } catch {
+          setSavedDesigns([]);
+        }
+      }
+    })();
   }, []);
 
   const encodedValue = useMemo(() => buildPayload(tpl, values), [tpl, values]);
@@ -191,24 +202,24 @@ export default function StaticDesigner({ isPro }) {
           return;
         }
       } catch (e) {
-        // fallback to local
+        // fallback to localStorage if server fails
+        const local = {
+          id: Date.now().toString(36),
+          createdAt: Date.now(),
+          name: designName || 'Saved QR',
+          template: tpl,
+          values: clone(values),
+          style: { ...clone(style), logoSizeRatio: logoSize },
+          payload: buildPayload(tpl, values),
+          hasLogo: !!logo && isPro
+        };
+        const key = savedKey();
+        const next = [local, ...savedDesigns].slice(0, MAX_SAVED);
+        setSavedDesigns(next);
+        localStorage.setItem(key, JSON.stringify(next));
+        setToast(local.hasLogo ? 'Saved design (logo not stored for privacy).' : 'Design saved.');
+        setTimeout(() => setToast(''), 2500);
       }
-      const local = {
-        id: Date.now().toString(36),
-        createdAt: Date.now(),
-        name: designName || 'Saved QR',
-        template: tpl,
-        values: clone(values),
-        style: { ...clone(style), logoSizeRatio: logoSize },
-        payload: buildPayload(tpl, values),
-        hasLogo: !!logo && isPro
-      };
-  const key = savedKey();
-  const next = [local, ...savedDesigns].slice(0, MAX_SAVED);
-  setSavedDesigns(next);
-  localStorage.setItem(key, JSON.stringify(next));
-      setToast(local.hasLogo ? 'Saved design (logo not stored for privacy).' : 'Design saved.');
-      setTimeout(() => setToast(''), 2500);
     })();
   };
 
@@ -230,6 +241,7 @@ export default function StaticDesigner({ isPro }) {
         setSavedDesigns(prev => prev.filter(d => d.id !== id));
         return;
       } catch (e) {
+        // fallback to localStorage if server fails
         const next = savedDesigns.filter(d => d.id !== id);
         setSavedDesigns(next);
         localStorage.setItem(savedKey(), JSON.stringify(next));
