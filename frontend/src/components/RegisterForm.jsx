@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api';
 import ReCaptchaBox from './ReCaptchaBox.jsx';
+import { FREE_PLAN_DYNAMIC_LIMIT, UPGRADES_ENABLED } from '../config/planLimits.js';
 
 const requireCaptcha = Boolean(import.meta.env.VITE_RECAPTCHA_SITE_KEY);
 
@@ -12,6 +13,13 @@ export default function RegisterForm({ onRegister, onNotice }){
   const [busy, setBusy] = useState(false);
   const [captchaToken, setCaptchaToken] = useState(null);
   const [captchaKey, setCaptchaKey] = useState(0);
+
+  const freePlanOption = UPGRADES_ENABLED
+    ? `Free — unlimited static QR, ${FREE_PLAN_DYNAMIC_LIMIT} dynamic QR, PNG/SVG exports`
+    : 'Free — unlimited static & dynamic QR (billing coming soon)';
+  const freePlanHint = UPGRADES_ENABLED
+    ? `Free plan includes unlimited static QR codes and ${FREE_PLAN_DYNAMIC_LIMIT} dynamic QR${FREE_PLAN_DYNAMIC_LIMIT === 1 ? '' : 's'}.`
+    : 'Free plan includes unlimited static and dynamic QR codes while paid plans are unavailable.';
 
   useEffect(() => { setMsg(''); }, [plan]);
 
@@ -95,7 +103,7 @@ export default function RegisterForm({ onRegister, onNotice }){
           value={plan}
           onChange={e=>setPlan(e.target.value)}
         >
-          <option value="free">Free — unlimited static QR, 1 dynamic, PNG/SVG exports</option>
+          <option value="free">{freePlanOption}</option>
           <option value="pro">Pro — analytics, scheduling, PDF/EPS, team seats</option>
         </select>
       </div>
@@ -103,7 +111,7 @@ export default function RegisterForm({ onRegister, onNotice }){
       <button type="submit" className="btn-primary auth-submit" disabled={busy}>
         {busy ? 'Creating…' : 'Create account'}
       </button>
-      <p className="auth-hint">Free plan includes unlimited static QR codes and one dynamic code.</p>
+      <p className="auth-hint">{freePlanHint}</p>
       {msg && <div className="auth-error">{msg}</div>}
     </form>
   );

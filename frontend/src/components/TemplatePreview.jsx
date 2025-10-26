@@ -1,5 +1,6 @@
 import React from 'react';
 import { TEMPLATE_LIBRARY } from './TemplateDataForm.jsx';
+import Icon from './ui/Icon.jsx';
 
 const TEMPLATE_META_LOOKUP = Object.fromEntries(
   TEMPLATE_LIBRARY.map(item => [item.id.toUpperCase(), item])
@@ -52,11 +53,11 @@ function withAlpha(hex = '#000000', alpha = 0.15) {
 function pickBrand(url) {
   if (!url) return null;
   const needle = url.toLowerCase();
-  if (needle.includes('facebook.com')) return { label: 'Facebook Page', accent: '#1877f2', icon: '📘' };
-  if (needle.includes('instagram.com')) return { label: 'Instagram', accent: '#E1306C', icon: '📸' };
-  if (needle.includes('youtube.com') || needle.includes('youtu.be')) return { label: 'YouTube', accent: '#FF0000', icon: '▶️' };
-  if (needle.includes('linkedin.com')) return { label: 'LinkedIn', accent: '#0A66C2', icon: '💼' };
-  if (needle.includes('twitter.com') || needle.includes('x.com')) return { label: 'Twitter', accent: '#1DA1F2', icon: '🐦' };
+  if (needle.includes('facebook.com')) return { label: 'Facebook Page', accent: '#1877f2', icon: 'facebook' };
+  if (needle.includes('instagram.com')) return { label: 'Instagram', accent: '#E1306C', icon: 'instagram' };
+  if (needle.includes('youtube.com') || needle.includes('youtu.be')) return { label: 'YouTube', accent: '#FF0000', icon: 'youtube' };
+  if (needle.includes('linkedin.com')) return { label: 'LinkedIn', accent: '#0A66C2', icon: 'linkedin' };
+  if (needle.includes('twitter.com') || needle.includes('x.com')) return { label: 'Twitter', accent: '#1DA1F2', icon: 'twitter' };
   return null;
 }
 
@@ -67,7 +68,7 @@ function cleanHost(url) {
     const { hostname } = new URL(normalized);
     return hostname.replace(/^www\./i, '');
   } catch {
-    return url.replace(/^https?:\/\//i, '').replace(/^www\./i, '') || 'your-website.com';
+    return String(url).replace(/^https?:\/\//i, '').replace(/^www\./i, '') || 'your-website.com';
   }
 }
 
@@ -100,7 +101,7 @@ function describeTemplate(type, values) {
   const normalizedType = (type || 'URL').toUpperCase();
   const baseMeta = TEMPLATE_META_LOOKUP[normalizedType];
   const accent = baseMeta?.accent || '#2563eb';
-  const icon = baseMeta?.icon || '✨';
+  const icon = baseMeta?.icon || 'sparkles';
 
   const finalize = (descriptor, { preserveAccent = false, preserveIcon = false } = {}) => {
     const result = { ...descriptor };
@@ -119,7 +120,7 @@ function describeTemplate(type, values) {
 
   switch (normalizedType) {
     case 'TEXT': {
-      const text = values.text || 'Hello there! 👋';
+      const text = values.text || 'Hello there! Welcome to our QR.';
       return finalize({
         eyebrow: 'Text snippet',
         title: 'Instant message',
@@ -171,7 +172,7 @@ function describeTemplate(type, values) {
     }
     case 'WHATSAPP': {
       const phone = values.phone || '+1 555 123 4567';
-      const text = values.text || 'Hey! 👋 Thanks for scanning our QR — can I help you with anything?';
+      const text = values.text || 'Thanks for scanning our QR — can I help you with anything?';
       return finalize({
         eyebrow: 'WhatsApp chat',
         title: 'Start a conversation',
@@ -236,7 +237,7 @@ function describeTemplate(type, values) {
         eyebrow: 'Digital business card',
         title: name,
         subtitle: title,
-        body: `📞 ${phone}\n✉️ ${email}`,
+        body: `Phone: ${phone}\nEmail: ${email}`,
         inlineSummary: `${name} • ${phone}`,
         tip: 'Creates or updates a contact in their address book.'
       }, { preserveIcon: true });
@@ -306,51 +307,194 @@ function describeTemplate(type, values) {
       });
     }
     case 'PDF': {
-      const url = values.url || '';
+      const url = values.fileUrl || '';
       const host = cleanHost(url);
+      const bgColor = values.backgroundColor || '#ffffff';
+      const textColor = values.textColor || '#000000';
+      const accentColor = values.accentColor || '#2563eb';
+      const filename = values.fileName || (url ? (() => {
+        try {
+          const parts = String(url).split('/');
+          return decodeURIComponent(parts[parts.length - 1] || '') || 'document.pdf';
+        } catch {
+          return 'document.pdf';
+        }
+      })() : 'document.pdf');
       return finalize({
         eyebrow: 'PDF Document',
-        title: url ? `📄 ${host}` : 'PDF Download',
+        title: url ? host : 'PDF Download',
         subtitle: 'Tap to download or view the document.',
-        body: url ? `Download PDF from ${host}` : 'Add a PDF URL to see it here.',
-        inlineSummary: url ? `PDF from ${host}` : 'Add PDF URL.',
-        tip: 'Opens the PDF in the browser or downloads it.'
-      });
-    }
-    case 'MP3': {
-      const url = values.url || '';
-      const host = cleanHost(url);
-      return finalize({
-        eyebrow: 'Audio File',
-        title: url ? `🎵 ${host}` : 'Audio Player',
-        subtitle: 'Tap to play the audio file.',
         body: (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{
+            background: bgColor,
+            borderRadius: 8,
+            padding: '16px',
+            border: `1px solid ${accentColor}20`,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            minHeight: 200
+          }}>
             <div style={{
-              background: '#f1f5f9',
-              borderRadius: 12,
-              padding: '16px',
-              textAlign: 'center',
-              color: '#475569'
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12
             }}>
-              <div style={{ fontSize: 24, marginBottom: 8 }}>🎵</div>
-              <div style={{ fontWeight: 600 }}>Audio Player</div>
-              <div style={{ fontSize: 14 }}>Tap play to listen</div>
+              <div style={{
+                fontSize: 32,
+                color: accentColor
+              }}>
+                <Icon name="file" size={32} />
+              </div>
+              <div style={{
+                flex: 1,
+                color: textColor
+              }}>
+                <div style={{ fontWeight: 600, fontSize: 16 }}>{filename}</div>
+                <div style={{ fontSize: 12, opacity: 0.7 }}>PDF Document</div>
+              </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+            <div style={{
+              background: '#f8f9fa',
+              borderRadius: 4,
+              padding: '12px',
+              fontSize: 12,
+              color: '#666',
+              lineHeight: 1.4
+            }}>
+              <div>Sample text from the PDF document...</div>
+              <div style={{ marginTop: 4 }}>This is a preview of the content.</div>
+              <div style={{ marginTop: 4 }}>Page 1 of 5</div>
+            </div>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 8
+            }}>
               <button style={{
-                background: accent,
+                background: accentColor,
                 color: 'white',
                 border: 'none',
                 borderRadius: 20,
                 padding: '8px 16px',
                 fontSize: 14,
-                cursor: 'pointer'
-              }}>⏯️ Play</button>
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Icon name="download" size={16} />
+                <span>Download PDF</span>
+              </button>
             </div>
           </div>
         ),
-        inlineSummary: url ? `Audio from ${host}` : 'Add audio URL.',
+        inlineSummary: url ? `PDF from ${host}` : 'Upload PDF file.',
+        tip: 'Opens the PDF in the browser or downloads it.'
+      });
+    }
+    case 'MP3': {
+      const url = values.fileUrl || '';
+      const host = cleanHost(url);
+      const bgColor = values.backgroundColor || '#f1f5f9';
+      const textColor = values.textColor || '#475569';
+      const accentColor = values.accentColor || '#2563eb';
+      const filename = values.fileName || (url ? (() => {
+        try {
+          const parts = String(url).split('/');
+          return decodeURIComponent(parts[parts.length - 1] || '') || 'audio.mp3';
+        } catch {
+          return 'audio.mp3';
+        }
+      })() : 'audio.mp3');
+      return finalize({
+        eyebrow: 'Audio File',
+        title: url ? host : 'Audio Player',
+        subtitle: 'Tap to play the audio file.',
+        body: (
+          <div style={{
+            background: bgColor,
+            borderRadius: 8,
+            padding: '16px',
+            border: `1px solid ${accentColor}20`,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            minHeight: 200
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12
+            }}>
+              <div style={{
+                fontSize: 32,
+                color: accentColor
+              }}>
+                <Icon name="audio" size={32} />
+              </div>
+              <div style={{
+                flex: 1,
+                color: textColor
+              }}>
+                <div style={{ fontWeight: 600, fontSize: 16 }}>{filename}</div>
+                <div style={{ fontSize: 12, opacity: 0.7 }}>Audio File</div>
+              </div>
+            </div>
+            {url ? (
+              <audio
+                controls
+                style={{ width: '100%', borderRadius: 8 }}
+                onError={(e) => console.error('Audio load error:', e.target.error, 'URL:', url)}
+                onLoadStart={() => console.log('Audio loading:', url)}
+                onCanPlay={() => console.log('Audio can play:', url)}
+              >
+                <source src={url} type="audio/mpeg" />
+                Your browser does not support the audio element.
+              </audio>
+            ) : (
+              <div style={{
+                background: '#f8f9fa',
+                borderRadius: 4,
+                padding: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12
+              }}>
+                <div style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  background: accentColor,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: 18
+                }}>▶</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: textColor }}>Preview Player</div>
+                  <div style={{ fontSize: 12, color: '#666' }}>Upload an MP3 to play</div>
+                </div>
+                <div style={{
+                  width: 100,
+                  height: 4,
+                  background: '#e2e8f0',
+                  borderRadius: 2,
+                  position: 'relative'
+                }}>
+                  <div style={{
+                    width: '0%',
+                    height: '100%',
+                    background: accentColor,
+                    borderRadius: 2
+                  }}></div>
+                </div>
+              </div>
+            )}
+          </div>
+        ),
+        inlineSummary: url ? `Audio from ${host}` : 'Upload audio file.',
         tip: 'Plays the MP3 directly in the browser.'
       });
     }
@@ -374,7 +518,7 @@ function describeTemplate(type, values) {
       const host = cleanHost(url);
       return finalize({
         eyebrow: brand?.label || 'Website',
-        title: brand ? `${brand.icon} ${host}` : host,
+        title: host,
         subtitle: brand ? 'Send visitors directly to your social page.' : 'Opens instantly when scanned.',
         body: url || 'Add your URL to see it here.',
         inlineSummary: url || 'Add a destination URL.',
@@ -424,7 +568,9 @@ function PhonePreview({ descriptor }) {
   return (
     <div className="content-preview-shell">
       <div className="content-preview-hero" style={{ background: `linear-gradient(160deg, ${withAlpha(accent || '#8b5cf6', 0.28)}, rgba(255,255,255,0.95))` }}>
-        <div className="content-preview-avatar">{icon || '✨'}</div>
+        <div className="content-preview-avatar">
+          <Icon name={icon || 'sparkles'} size={24} />
+        </div>
         <div className="content-preview-copy">
           {eyebrow && <span className="content-preview-chip">{eyebrow}</span>}
           <h4>{title || 'Your preview title'}</h4>
@@ -485,4 +631,155 @@ export default function TemplatePreview({ type, values, variant = 'card' }) {
   if (variant === 'inline') return <InlinePreview descriptor={descriptor} />;
   if (variant === 'phone') return <PhonePreview descriptor={descriptor} />;
   return <InlinePreview descriptor={descriptor} />;
+}
+
+export function EditableTemplatePreview({ type, values, onChange, variant = 'card' }) {
+  const descriptor = describeTemplate(type, values);
+  if (variant === 'inline') return <EditableInlinePreview descriptor={descriptor} onChange={onChange} />;
+  if (variant === 'phone') return <EditablePhonePreview descriptor={descriptor} onChange={onChange} />;
+  return <EditableInlinePreview descriptor={descriptor} onChange={onChange} />;
+}
+
+function EditableInlinePreview({ descriptor, onChange }) {
+  const {
+    eyebrow,
+    title,
+    subtitle,
+    highlight,
+    inlineSummary,
+    accent
+  } = descriptor;
+  return (
+    <div
+      className="inline-preview-card editable"
+      style={{
+        background: `linear-gradient(135deg, ${withAlpha(accent || '#2563eb', 0.12)}, ${withAlpha(accent || '#2563eb', 0.05)})`,
+        border: `1px solid ${withAlpha(accent || '#2563eb', 0.18)}`
+      }}
+    >
+      {eyebrow && <span className="inline-eyebrow">{eyebrow}</span>}
+      <div className="inline-title" contentEditable onBlur={(e) => onChange('title', e.target.textContent)}>{title || 'Ready to preview'}</div>
+      {subtitle && <div className="inline-subtitle" contentEditable onBlur={(e) => onChange('subtitle', e.target.textContent)}>{subtitle}</div>}
+      {highlight && <div className="inline-highlight" contentEditable onBlur={(e) => onChange('highlight', e.target.textContent)}>{highlight}</div>}
+      <div className="inline-summary" contentEditable onBlur={(e) => onChange('inlineSummary', e.target.textContent)}>{inlineSummary || ''}</div>
+    </div>
+  );
+}
+
+function EditablePhonePreview({ descriptor, onChange }) {
+  const {
+    eyebrow,
+    title,
+    subtitle,
+    body,
+    highlight,
+    inlineSummary,
+    accent,
+    icon
+  } = descriptor;
+
+  const bodyLines = typeof body === 'string' ? toLines(body) : [];
+  const highlightLines = toLines(highlight);
+  const actionLines = [];
+  if (highlightLines.length) actionLines.push(...highlightLines);
+  if (inlineSummary) actionLines.push(inlineSummary);
+  if (bodyLines.length && actionLines.length === 0) {
+    actionLines.push(...bodyLines.slice(0, 2));
+  }
+
+  return (
+    <div className="content-preview-shell editable">
+      <div className="content-preview-hero" style={{ background: `linear-gradient(160deg, ${withAlpha(accent || '#8b5cf6', 0.28)}, rgba(255,255,255,0.95))` }}>
+        <div className="content-preview-avatar">
+          <Icon name={icon || 'sparkles'} size={24} />
+        </div>
+        <div className="content-preview-copy">
+          {eyebrow && <span className="content-preview-chip" contentEditable onBlur={(e) => onChange('eyebrow', e.target.textContent)}>{eyebrow}</span>}
+          <h4 contentEditable onBlur={(e) => onChange('title', e.target.textContent)}>{title || 'Your preview title'}</h4>
+          {subtitle && <p contentEditable onBlur={(e) => onChange('subtitle', e.target.textContent)}>{subtitle}</p>}
+        </div>
+      </div>
+
+      <div className="content-preview-body">
+        {React.isValidElement(body) ? (
+          <div className="content-preview-rich">{body}</div>
+        ) : (
+          bodyLines.map((line, idx) => <p key={idx} contentEditable onBlur={(e) => onChange('body', e.target.textContent)}>{line}</p>)
+        )}
+      </div>
+
+      {actionLines.length > 0 && (
+        <div className="content-preview-actions">
+          {actionLines.slice(0, 3).map((line, idx) => (
+            <button type="button" className="content-preview-action" key={idx} contentEditable onBlur={(e) => onChange('action', e.target.textContent)}>
+              <span>{line}</span>
+              <span aria-hidden="true">↗</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function LivePreview({ type, values, variant = 'phone' }) {
+  const descriptor = describeTemplate(type, values);
+  if (variant === 'phone') return <LivePhonePreview descriptor={descriptor} />;
+  return <LivePhonePreview descriptor={descriptor} />;
+}
+
+function LivePhonePreview({ descriptor }) {
+  const {
+    eyebrow,
+    title,
+    subtitle,
+    body,
+    highlight,
+    inlineSummary,
+    accent,
+    icon
+  } = descriptor;
+
+  const bodyLines = typeof body === 'string' ? toLines(body) : [];
+  const highlightLines = toLines(highlight);
+  const actionLines = [];
+  if (highlightLines.length) actionLines.push(...highlightLines);
+  if (inlineSummary) actionLines.push(inlineSummary);
+  if (bodyLines.length && actionLines.length === 0) {
+    actionLines.push(...bodyLines.slice(0, 2));
+  }
+
+  return (
+    <div className="content-preview-shell live">
+      <div className="content-preview-hero" style={{ background: `linear-gradient(160deg, ${withAlpha(accent || '#8b5cf6', 0.28)}, rgba(255,255,255,0.95))` }}>
+        <div className="content-preview-avatar">
+          <Icon name={icon || 'sparkles'} size={24} />
+        </div>
+        <div className="content-preview-copy">
+          {eyebrow && <span className="content-preview-chip">{eyebrow}</span>}
+          <h4>{title || 'Your preview title'}</h4>
+          {subtitle && <p>{subtitle}</p>}
+        </div>
+      </div>
+
+      <div className="content-preview-body">
+        {React.isValidElement(body) ? (
+          <div className="content-preview-rich">{body}</div>
+        ) : (
+          bodyLines.map((line, idx) => <p key={idx}>{line}</p>)
+        )}
+      </div>
+
+      {actionLines.length > 0 && (
+        <div className="content-preview-actions">
+          {actionLines.slice(0, 3).map((line, idx) => (
+            <button type="button" className="content-preview-action" key={idx}>
+              <span>{line}</span>
+              <span aria-hidden="true">↗</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }

@@ -1,0 +1,243 @@
+/* Mobile-First Responsive Enhancements */
+
+/* Touch-friendly targets - minimum 44x44px */
+button, .btn-primary, .btn-secondary, .nav-card, .chip-action {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.75rem 1.5rem;
+}
+
+/* Mobile Navigation */
+@media (max-width: 768px) {
+  .dashboard-topbar {
+    flex-direction: column;
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .dashboard-topbar .brand {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .dashboard-topbar-actions {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .dashboard-body {
+    padding: 20px 16px 96px;
+  }
+  
+  .dashboard-nav {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .nav-card {
+    width: 100%;
+  }
+  
+  /* Glass Card Mobile */
+  .glass-card {
+    padding: 20px 16px;
+  }
+  
+  /* Auth Modal Mobile */
+  .auth-modal {
+    flex-direction: column;
+    width: 95vw;
+    max-width: 95vw;
+  }
+  
+  .auth-illustration {
+    display: none; /* Hide on mobile */
+  }
+  
+  .auth-panel {
+    width: 100%;
+    padding: 24px 20px;
+  }
+  
+  /* Form inputs mobile */
+  input, textarea, select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    width: 100%;
+  }
+  
+  /* QR Code Display Mobile */
+  .qr-preview {
+    max-width: 100%;
+  }
+  
+  /* Stats Grid Mobile */
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  /* Bottom Nav Mobile */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.9);
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+    padding: 12px;
+    z-index: 100;
+  }
+  
+  .bottom-nav button {
+    flex: 1;
+    min-height: 50px;
+  }
+  
+  /* Modal Mobile */
+  .modal-overlay {
+    padding: 16px;
+  }
+  
+  .modal-card {
+    width: 100%;
+    max-width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  /* Dashboard Summary Mobile */
+  .dashboard-summary {
+    padding: 20px 16px;
+  }
+  
+  /* Recent Card Mobile */
+  .recent-card {
+    padding: 16px;
+  }
+  
+  /* Template Gallery Mobile */
+  .templates-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  /* Bulk Generator Mobile */
+  .bulk-generator {
+    padding: 16px;
+  }
+  
+  .bulk-generator textarea {
+    min-height: 120px;
+  }
+}
+
+/* Tablet Optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard-body {
+    padding: 24px 32px 96px;
+  }
+  
+  .templates-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Desktop Enhancements */
+@media (min-width: 1025px) {
+  .dashboard-body {
+    padding: 32px 48px 96px;
+  }
+  
+  .templates-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Loading Spinner */
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Pull to Refresh Mobile */
+.refresh-indicator {
+  text-align: center;
+  padding: 12px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Swipe Gestures */
+.swipeable {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Improved Focus States */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #f1f5f9;
+    --ink-muted: #cbd5e1;
+    --ink-subtle: rgba(241, 245, 249, 0.6);
+    --surface: rgba(15, 23, 42, 0.9);
+    --surface-muted: rgba(30, 41, 59, 0.82);
+    --bg: linear-gradient(160deg, #1e293b 0%, #0f172a 40%, #0c0f1a 100%);
+  }
+}
+
+/* Accessibility Improvements */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .dashboard-topbar,
+  .bottom-nav,
+  button {
+    display: none;
+  }
+  
+  .dashboard-body {
+    padding: 0;
+  }
+}
+
+

@@ -1,7 +1,7 @@
 import React from 'react';
 import DynamicDashboard from './DynamicDashboard.jsx';
 
-export default function BuilderFlow({ user, config = {}, onClose, onRefresh }) {
+export default function BuilderFlow({ user, config = {}, onClose, onRefresh, onUpgrade }) {
   return (
     <div className="builder-flow dynamic">
       <DynamicDashboard
@@ -10,6 +10,7 @@ export default function BuilderFlow({ user, config = {}, onClose, onRefresh }) {
         initialType={config.type ?? null}
         onClose={onClose}
         onRefresh={onRefresh}
+        onUpgrade={onUpgrade}
       />
     </div>
   );

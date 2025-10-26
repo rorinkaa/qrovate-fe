@@ -1,155 +1,326 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import GlassCard from './ui/GlassCard.jsx';
-import SectionHeading from './ui/SectionHeading.jsx';
 import RecentCard from './RecentCard.jsx';
+import Icon from './ui/Icon.jsx';
+import { FREE_PLAN_DYNAMIC_LIMIT, UPGRADES_ENABLED } from '../config/planLimits.js';
 
-function HeroIllustration() {
-  return (
-    <div className="hero-illustration" aria-hidden="true">
-      <div className="hero-gradient" />
-      <svg className="hero-svg" viewBox="0 0 360 240">
-        <defs>
-          <linearGradient id="heroOrb" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.7" />
-            <stop offset="100%" stopColor="#c084fc" stopOpacity="0.4" />
-          </linearGradient>
-          <linearGradient id="heroCard" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#f8fafc" />
-            <stop offset="100%" stopColor="#e0f2fe" />
-          </linearGradient>
-        </defs>
-        <g className="hero-orbits">
-          <ellipse cx="180" cy="110" rx="120" ry="78" fill="none" stroke="rgba(255,255,255,0.32)" strokeDasharray="6 12" />
-          <ellipse cx="180" cy="110" rx="150" ry="102" fill="none" stroke="rgba(255,255,255,0.22)" strokeDasharray="4 10" />
-        </g>
-        <g className="hero-orbit-dot">
-          <circle cx="280" cy="80" r="6" fill="#22d3ee" />
-          <circle cx="92" cy="60" r="7" fill="#fbbf24" />
-          <circle cx="130" cy="180" r="6" fill="#a855f7" />
-        </g>
-        <g className="hero-main-card">
-          <rect x="120" y="75" width="160" height="112" rx="26" fill="url(#heroCard)" stroke="rgba(148,163,184,0.28)" />
-          <text x="140" y="110" className="hero-kpi-eyebrow">LIVE SCANS</text>
-          <text x="140" y="148" className="hero-kpi-value">3,248</text>
-          <text x="140" y="176" className="hero-kpi-sub">Dynamic redirects active</text>
-        </g>
-      </svg>
-    </div>
-  );
+function formatNumber(value) {
+  if (value === null || value === undefined || value === '' || Number.isNaN(Number(value))) {
+    return '—';
+  }
+  try {
+    return new Intl.NumberFormat('en-US').format(Number(value));
+  } catch (_) {
+    return String(value);
+  }
 }
 
-export default function DashboardSummary({ user, onCreateNew, onOpenCodes, lastCreated = null }) {
-  const verified = user.email_verified !== false;
-  const name = user.email.split('@')[0] || 'there';
-  const planLabel = user.is_pro ? 'Pro plan active' : `Free plan · ${user.trial_days_left} days left`;
-  const studioShortcuts = [
-    { label: 'Dynamic', icon: '⚡', description: 'Editable URLs, analytics, retargeting.', action: () => onCreateNew?.({ type: 'dynamic-new', codeId: null }) },
-    { label: 'Static', icon: '🎨', description: 'Instant SVG/PNG exports encoded with data.', action: () => onCreateNew?.({ type: 'static-new', codeId: null }) },
-    { label: 'Templates', icon: '🗂️', description: 'Start from curated campaign layouts.', action: onOpenCodes }
-  ];
+function shortTarget(target) {
+  if (!target) return '';
+  const clean = target.replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+  return clean.length > 40 ? `${clean.slice(0, 37)}…` : clean;
+}
 
-  const metrics = [
-    { label: 'Dynamic codes live', value: user.dynamic_count ?? '—', trend: '+12%', tone: 'success' },
-    { label: 'Static designs saved', value: user.static_count ?? '—', trend: '+4 this week', tone: 'warning' },
-    { label: 'Scans this week', value: user.scan_count ?? '—', trend: '+18% vs last', tone: 'info' }
-  ];
+function formatRelative(dateLike) {
+  if (!dateLike) return 'No updates yet';
+  const date = new Date(dateLike);
+  if (Number.isNaN(date.getTime())) return 'Recently updated';
+  const diff = Date.now() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes} min${minutes === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`;
+  return date.toLocaleDateString();
+}
 
-  const highlights = [
-    { title: 'Smart redirect', description: 'Route scanners by device to optimize conversions.', icon: '🧭' },
-    { title: 'Schedule launch', description: 'Pick a go-live date for your next campaign.', icon: '⏱️' },
-    { title: 'Add branded frame', description: 'Apply seasonal colours and CTAs in minutes.', icon: '🎨' }
-  ];
+export default function DashboardSummary({ user, onCreateNew, onOpenCodes, lastCreated = null, onUpgrade }) {
+  const upgradesEnabled = UPGRADES_ENABLED;
+  const dynamicLimit = user.free_plan_dynamic_limit ?? FREE_PLAN_DYNAMIC_LIMIT;
+  const dynamicCount = user.dynamic_count ?? 0;
+  const remainingSlots = upgradesEnabled && !user.is_pro
+    ? Math.max(0, dynamicLimit - dynamicCount)
+    : Infinity;
+  const planLabel = user.is_pro
+    ? 'Pro plan active'
+    : upgradesEnabled
+      ? `Free plan · ${dynamicLimit} dynamic QR limit`
+      : 'Free plan · unlimited dynamic QR';
 
-  const tasks = [
-    verified ? null : 'Verify your email to unlock analytics and automations.',
-    user.is_pro
-      ? 'Schedule a redirect to test the new automation workflow.'
-      : 'Upgrade to Pro to add logos, schedule redirects, and track deeper analytics.',
-    'Create at least one static and one dynamic QR to finish onboarding.'
-  ].filter(Boolean);
+  const scansToday = user.scans_today ?? user.scan_count ?? 0;
+  const scanDelta = user.scan_delta ?? '+18% vs yesterday';
+  const topCandidate = user.top_scan || (user.top_scans && user.top_scans[0]) || lastCreated;
 
-  const timeline = [
-    { time: 'Today', detail: 'Launch the “Spring Pop-up” QR experience.', icon: '🚀' },
-    { time: 'Tomorrow', detail: 'Review campaign scans and export PDF kit.', icon: '📈' },
-    { time: 'Friday', detail: 'Share static codes with your print vendor.', icon: '🖨️' }
-  ];
+  const navItems = useMemo(() => [
+    {
+      id: 'activity',
+      label: 'Activity',
+      subtitle: 'Scans & top links',
+      icon: 'trend',
+      action: null
+    },
+    {
+      id: 'codes',
+      label: 'My QR library',
+      subtitle: 'Manage and export',
+      icon: 'library',
+      action: () => onOpenCodes?.()
+    },
+    {
+      id: 'create',
+      label: 'Create new',
+      subtitle: 'Dynamic & static flows',
+      icon: 'lightning',
+      action: () => onCreateNew?.({ type: 'dynamic-new', codeId: null })
+    },
+    {
+      id: 'templates',
+      label: 'Campaign templates',
+      subtitle: 'Jumpstart a project',
+      icon: 'template',
+      action: () => onOpenCodes?.()
+    }
+  ], [onCreateNew, onOpenCodes]);
+
+  const [activeNav, setActiveNav] = useState(navItems[0]?.id ?? 'activity');
+
+  const activityCards = useMemo(() => {
+    const topLabel = topCandidate?.name || topCandidate?.label || shortTarget(topCandidate?.target) || 'Share your first QR';
+    const topMeta = topCandidate?.scan_count != null
+      ? `${formatNumber(topCandidate.scan_count)} total scans`
+      : topCandidate?.target
+        ? shortTarget(topCandidate.target)
+        : 'Pick a campaign to start tracking';
+
+    const lastLabel = lastCreated
+      ? formatRelative(lastCreated.updatedAt || lastCreated.createdAt)
+      : 'No edits yet';
+    const lastMeta = lastCreated?.target ? shortTarget(lastCreated.target) : 'Make a change to see it here';
+
+    return [
+      {
+        id: 'scans',
+        icon: 'trend',
+        label: 'Scans today',
+        primary: formatNumber(scansToday),
+        meta: scanDelta
+      },
+      {
+        id: 'top',
+        icon: 'sparkles',
+        label: 'Top QR this week',
+        primary: topLabel,
+        meta: topMeta,
+        onClick: () => onOpenCodes?.()
+      },
+      {
+        id: 'updates',
+        icon: 'refresh',
+        label: 'Last update',
+        primary: lastLabel,
+        meta: lastMeta,
+        onClick: lastCreated
+          ? () => onCreateNew?.({ type: lastCreated.template ? 'static-edit' : 'dynamic-edit', codeId: lastCreated.id })
+          : () => onCreateNew?.({ type: 'dynamic-new', codeId: null })
+      }
+    ];
+  }, [lastCreated, onCreateNew, onOpenCodes, scanDelta, scansToday, topCandidate]);
+
+  const assistantSteps = useMemo(() => {
+    const steps = [];
+    if (upgradesEnabled && !user.is_pro) {
+      if (remainingSlots <= 1) {
+        steps.push({
+          id: 'upgrade',
+          icon: 'rocket',
+          title: 'Unlock unlimited dynamic QR codes',
+          description: remainingSlots === 0
+            ? 'You have used the free plan allotment. Upgrade to keep launching campaigns without limits.'
+            : `Only ${remainingSlots} free dynamic slot${remainingSlots === 1 ? '' : 's'} remaining — upgrade to keep momentum.`,
+          cta: onUpgrade ? { label: 'Upgrade to Pro', onClick: onUpgrade } : null
+        });
+      } else {
+        steps.push({
+          id: 'slot',
+          icon: 'compass',
+          title: 'Set up your next dynamic redirect',
+          description: `You have ${remainingSlots} free slot${remainingSlots === 1 ? '' : 's'} ready. Use them for seasonal campaigns or menus.`,
+          cta: { label: 'Create dynamic QR', onClick: () => onCreateNew?.({ type: 'dynamic-new', codeId: null }) }
+        });
+      }
+    }
+
+    if (lastCreated) {
+      steps.push({
+        id: 'automation',
+        icon: 'refresh',
+        title: 'Schedule an automation for your latest QR',
+        description: 'Plan a timed redirect or add device-specific routing to keep the experience fresh.',
+        cta: { label: 'Configure automation', onClick: () => onCreateNew?.({ type: lastCreated.template ? 'static-edit' : 'dynamic-edit', codeId: lastCreated.id }) }
+      });
+    }
+
+    steps.push({
+      id: 'static-kit',
+      icon: 'printer',
+      title: 'Export a fresh static kit',
+      description: 'Generate branded PNG/SVG assets to share with your print or signage partners.',
+      cta: { label: 'Open static studio', onClick: () => onCreateNew?.({ type: 'static-new', codeId: null }) }
+    });
+
+    return steps;
+  }, [lastCreated, onCreateNew, onUpgrade, remainingSlots, upgradesEnabled, user.is_pro]);
+
+  const quickActions = useMemo(() => [
+    {
+      icon: 'lightning',
+      label: 'New dynamic QR',
+      description: 'Editable target with analytics baked in.',
+      onClick: () => onCreateNew?.({ type: 'dynamic-new', codeId: null })
+    },
+    {
+      icon: 'static',
+      label: 'Design static code',
+      description: 'Jump into the static studio for instant exports.',
+      onClick: () => onCreateNew?.({ type: 'static-new', codeId: null })
+    },
+    {
+      icon: 'library',
+      label: 'Manage QR library',
+      description: 'Filter, share, or archive existing campaigns.',
+      onClick: () => onOpenCodes?.()
+    }
+  ], [onCreateNew, onOpenCodes]);
 
   return (
-    <div className="dashboard-summary">
-      <div className="dashboard-summary-grid">
-        <GlassCard className="summary-hero dashboard-animate" style={{ '--delay': '0s' }}>
-          <div style={{display:'flex',gap:16,alignItems:'center',justifyContent:'space-between',flexWrap:'wrap'}}>
-            <div style={{flex:'1 1 420px',minWidth:0}}>
-              <div className="hero-copy">
-                <SectionHeading
-                  eyebrow="Workspace overview"
-                  title={`Welcome back, ${name}!`}
-                  subtitle="Everything you launch from here is tracked, branded, and ready to update without reprinting."
-                />
-                <div className="summary-actions">
-                  <button
-                    className="btn-primary"
-                    onClick={()=>onCreateNew?.({ type: 'dynamic-new', codeId: null })}
-                  >
-                    Create dynamic QR
-                  </button>
-                  <button
-                    className="btn-secondary ghost"
-                    onClick={()=>onCreateNew?.({ type: 'static-new', codeId: null })}
-                  >
-                    Open static studio
-                  </button>
-                </div>
-              </div>
+    <div className="summary-shell">
+      <aside className="summary-sidebar">
+        <div className="sidebar-header">
+          <span className="sidebar-eyebrow">Workspace</span>
+          <h2>{user.org || 'My dashboard'}</h2>
+          <p>{planLabel}</p>
+        </div>
+        <nav className="sidebar-nav" aria-label="Dashboard navigation">
+          {navItems.map(item => (
+            <button
+              key={item.id}
+              type="button"
+              className={activeNav === item.id ? 'sidebar-nav-item active' : 'sidebar-nav-item'}
+              onClick={() => {
+                setActiveNav(item.id);
+                item.action?.();
+              }}
+            >
+              <span className="sidebar-nav-icon" aria-hidden="true">
+                <Icon name={item.icon} size={18} />
+              </span>
+              <span className="sidebar-nav-copy">
+                <strong>{item.label}</strong>
+                {item.subtitle && <span>{item.subtitle}</span>}
+              </span>
+            </button>
+          ))}
+        </nav>
+        <div className="sidebar-footer">
+          {upgradesEnabled && !user.is_pro && onUpgrade && (
+            <button type="button" className="btn-primary" onClick={onUpgrade}>Upgrade to Pro</button>
+          )}
+          <button type="button" className="btn-secondary ghost" onClick={() => onCreateNew?.({ type: 'dynamic-new', codeId: null })}>
+            Launch new dynamic QR
+          </button>
+        </div>
+      </aside>
+
+      <div className="summary-main">
+        <div className="summary-activity-grid">
+          {activityCards.map(card => (
+            <GlassCard
+              key={card.id}
+              className={card.onClick ? 'activity-card clickable' : 'activity-card'}
+              role={card.onClick ? 'button' : undefined}
+              tabIndex={card.onClick ? 0 : -1}
+              onClick={card.onClick || undefined}
+              onKeyDown={card.onClick ? (evt) => { if (evt.key === 'Enter' || evt.key === ' ') { evt.preventDefault(); card.onClick(); } } : undefined}
+            >
+              <span className="activity-icon" aria-hidden="true">
+                <Icon name={card.icon} size={18} />
+              </span>
+              <span className="activity-copy">
+                <span className="activity-label">{card.label}</span>
+                <strong className="activity-primary">{card.primary}</strong>
+                {card.meta && <span className="activity-meta">{card.meta}</span>}
+              </span>
+            </GlassCard>
+          ))}
+        </div>
+
+        <div className="summary-panels">
+          <GlassCard className="assistant-card">
+            <div className="assistant-header">
+              <Icon name="sparkles" size={18} />
+              <h3>Next best step</h3>
             </div>
+            <ul className="assistant-list">
+              {assistantSteps.map(step => (
+                <li key={step.id}>
+                  <span className="assistant-icon" aria-hidden="true">
+                    <Icon name={step.icon} size={18} />
+                  </span>
+                  <div className="assistant-body">
+                    <strong>{step.title}</strong>
+                    {step.description && <p>{step.description}</p>}
+                    {step.cta && (
+                      <button type="button" onClick={step.cta.onClick}>{step.cta.label}</button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </GlassCard>
 
-            <div style={{flex:'0 0 320px'}}>
-              <RecentCard item={lastCreated} onEdit={(it)=>onCreateNew?.({ type: it.template ? 'static-edit' : 'dynamic-edit', codeId: it.id })} />
-            </div>
-          </div>
-        </GlassCard>
-
-        <GlassCard className="summary-card metrics-card dashboard-animate" style={{ '--delay': '0.05s' }}>
-          <h3>Performance pulse</h3>
-          <div className="summary-metrics-grid">
-            {metrics.map((metric, idx) => (
-              <div
-                key={metric.label}
-                className="metric-card"
-                style={{ '--delay': `${idx * 0.08}s` }}
-              >
-                <span className="metric-label">{metric.label}</span>
-                <strong className={`metric-value ${metric.tone}`}>{metric.value}</strong>
-                <span className="metric-trend">{metric.trend}</span>
+          <GlassCard className="recent-card-wrap">
+            <h3>Latest launch</h3>
+            {lastCreated ? (
+              <RecentCard
+                item={lastCreated}
+                onEdit={(item) => onCreateNew?.({ type: item.template ? 'static-edit' : 'dynamic-edit', codeId: item.id })}
+              />
+            ) : (
+              <div className="recent-empty">
+                <p>Launch a dynamic QR to see it here.</p>
+                <button type="button" className="btn-primary" onClick={() => onCreateNew?.({ type: 'dynamic-new', codeId: null })}>
+                  Create dynamic QR
+                </button>
               </div>
-            ))}
+            )}
+          </GlassCard>
+        </div>
+
+        <GlassCard className="quick-actions-card">
+          <div className="quick-actions-header">
+            <h3>Quick actions</h3>
+            <span>Common flows at your fingertips.</span>
           </div>
-        </GlassCard>
-
-
-        <GlassCard className="summary-card studio-card dashboard-animate" style={{ '--delay': '0.34s' }}>
-          <h3>Launch a new experience</h3>
-          <p className="summary-text">Pick the flow that matches your project and we’ll pre-load best-practice settings.</p>
-          <div className="studio-grid">
-            {studioShortcuts.map((shortcut, idx) => (
+          <div className="quick-actions-grid">
+            {quickActions.map(action => (
               <button
-                key={shortcut.label}
+                key={action.label}
                 type="button"
-                className="studio-tile"
-                style={{ '--delay': `${idx * 0.08}s` }}
-                onClick={shortcut.action}
+                className="quick-action-tile"
+                onClick={action.onClick}
               >
-                <div className="studio-icon">{shortcut.icon}</div>
-                <div className="studio-content">
-                  <strong>{shortcut.label}</strong>
-                  <p>{shortcut.description}</p>
+                <Icon name={action.icon} size={20} />
+                <div className="quick-action-copy">
+                  <strong>{action.label}</strong>
+                  <p>{action.description}</p>
                 </div>
-                <span className="studio-arrow">→</span>
+                <span className="quick-action-arrow" aria-hidden="true">→</span>
               </button>
             ))}
           </div>
         </GlassCard>
-
       </div>
     </div>
   );

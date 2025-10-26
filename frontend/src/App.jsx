@@ -7,6 +7,7 @@ import Privacy from './components/Privacy.jsx';
 import SiteFooter from './components/SiteFooter.jsx';
 import Homepage from './components/Homepage.jsx';
 import GlassCard from './components/ui/GlassCard.jsx';
+import Icon from './components/ui/Icon.jsx';
 import DashboardSummary from './components/DashboardSummary.jsx';
 import BuilderFlow from './components/BuilderFlow.jsx';
 import MyQRCodes from './components/MyQRCodes.jsx';
@@ -14,7 +15,8 @@ import CookieBanner from './components/CookieBanner.jsx';
 import CookieManager from './components/CookieManager.jsx';
 import BottomNav from './components/BottomNav.jsx';
 
-import { API, api } from './api.js';
+import { api, startCheckout, fetchProfile } from './api.js';
+import { FREE_PLAN_DYNAMIC_LIMIT, UPGRADES_ENABLED } from './config/planLimits.js';
 
 const COOKIE_KEY = 'qr_cookie_consent';
 const COOKIE_PREF_KEY = 'qr_cookie_preferences';
@@ -50,6 +52,18 @@ export default function App(){
     if (typeof window === 'undefined') return false;
     return !localStorage.getItem(COOKIE_KEY);
   });
+  const handleCountsChange = useCallback(({ dynamic, staticCount }) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const nextDynamic = typeof dynamic === 'number' ? dynamic : prev.dynamic_count;
+      const nextStatic = typeof staticCount === 'number' ? staticCount : prev.static_count;
+      if (nextDynamic === prev.dynamic_count && nextStatic === prev.static_count) {
+        return prev;
+      }
+      return { ...prev, dynamic_count: nextDynamic, static_count: nextStatic };
+    });
+  }, []);
+
   const [cookiePreferences, setCookiePreferences] = useState(() => {
     if (typeof window === 'undefined') return defaultCookiePrefs;
     try {
@@ -63,6 +77,21 @@ export default function App(){
     return defaultCookiePrefs;
   });
   const [cookieManagerOpen, setCookieManagerOpen] = useState(false);
+
+  const refreshProfile = useCallback(async () => {
+    try {
+      const profile = await fetchProfile();
+      if (!profile) return;
+      setUser(prev => {
+        const next = { ...(prev || {}), ...profile };
+        try { localStorage.setItem('qr_user', JSON.stringify(next)); } catch (_){ }
+        return next;
+      });
+    } catch (err) {
+      if (err?.status === 401) return;
+      console.error('Failed to refresh profile', err);
+    }
+  }, []);
 
   const scrollToTop = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -85,6 +114,28 @@ export default function App(){
   useEffect(() => {
     scrollToTop();
   }, [view, scrollToTop]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (!UPGRADES_ENABLED) {
+      if (url.searchParams.has('billing')) {
+        url.searchParams.delete('billing');
+        window.history.replaceState({}, '', url.toString());
+      }
+      return;
+    }
+    const billingStatus = url.searchParams.get('billing');
+    if (!billingStatus) return;
+    if (billingStatus === 'success') {
+      setDashboardAlert({ type: 'success', text: 'Thanks for upgrading! Pro features are now unlocked.' });
+      refreshProfile();
+    } else if (billingStatus === 'cancel') {
+      setDashboardAlert({ type: 'info', text: 'Upgrade cancelled. You can upgrade anytime from the dashboard.' });
+    }
+    url.searchParams.delete('billing');
+    window.history.replaceState({}, '', url.toString());
+  }, [refreshProfile]);
 
   useEffect(()=>{
     const raw = localStorage.getItem('qr_user');
@@ -174,7 +225,7 @@ export default function App(){
     return () => { ignore = true; };
   }, [user, codesVersion]);
 
-  function clearAuthParams(keys = ['reset','verify']){
+  function clearAuthParams(keys = ['reset','verify','billing']){
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
     let mutated = false;
@@ -207,6 +258,7 @@ export default function App(){
     setAuthOpen(false);
     setDashboardAlert(null);
     setResendBusy(false);
+    refreshProfile();
   }
 
   function logout(){
@@ -223,24 +275,33 @@ export default function App(){
     setResendBusy(false);
   }
 
-  async function upgradeWithStripe(){
-    if(!user) return;
-    const r = await fetch(`${API}/billing/checkout`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ email: user.email })
-    });
-    const j = await r.json();
-    if(j.url) window.location.href = j.url;
-    else alert(j.error || 'Checkout failed');
-  }
-
   function requestAuth(){
     setMode('login');
     setAuthAlert(null);
     setResetToken(null);
     clearAuthParams();
     setAuthOpen(true);
+  }
+
+  async function handleUpgrade(){
+    if (!UPGRADES_ENABLED) {
+      setDashboardAlert({ type: 'info', text: 'Paid plans are coming soon. For now, enjoy unlimited access.' });
+      return;
+    }
+    if (!user) {
+      requestAuth();
+      return;
+    }
+    try {
+      const { url } = await startCheckout();
+      if (url) {
+        window.location.href = url;
+      } else {
+        setDashboardAlert({ type: 'error', text: 'Unable to start checkout. Please try again.' });
+      }
+    } catch (err) {
+      setDashboardAlert({ type: 'error', text: err.message || 'Unable to start checkout. Please try again.' });
+    }
   }
 
   function closeAuthModal(){
@@ -387,12 +448,13 @@ export default function App(){
   }
 
   const nav = [
-    { id: 'summary', label: 'Dashboard', subtitle: 'Recent activity & quick actions', emoji: '📊' },
-    { id: 'codes', label: 'My QR codes', subtitle: 'Download, edit, and review stats', emoji: '🗂️' },
-    { id: 'builder', label: 'Create new code', subtitle: 'Start a guided flow', emoji: '✨' }
+    { id: 'summary', label: 'Dashboard', subtitle: 'Recent activity & quick actions', icon: 'dashboard' },
+    { id: 'codes', label: 'My QR codes', subtitle: 'Download, edit, and review stats', icon: 'library' },
+    { id: 'builder', label: 'Create new code', subtitle: 'Start a guided flow', icon: 'sparkles' }
   ];
   const verified = user.email_verified !== false;
-  const planLabel = user.is_pro ? 'Pro plan active' : `Free plan · ${user.trial_days_left} days left`;
+  const dynamicLimit = user?.free_plan_dynamic_limit ?? FREE_PLAN_DYNAMIC_LIMIT;
+  const planLabel = user.is_pro ? 'Pro plan active' : `Free plan · ${dynamicLimit} dynamic QR limit`;
   return (
     <>
       <div className="dashboard-layout">
@@ -449,7 +511,9 @@ export default function App(){
                       setView(item.id);
                     }}
                   >
-                    <div className="nav-icon">{item.emoji}</div>
+                    <div className="nav-icon">
+                      <Icon name={item.icon} size={20} />
+                    </div>
                     <div className="nav-copy">
                       <div className="nav-label">{item.label}</div>
                       <div className="nav-sub">{item.subtitle}</div>
@@ -466,13 +530,17 @@ export default function App(){
                   onCreateNew={openBuilder}
                   onOpenCodes={() => setView('codes')}
                   lastCreated={lastCreated}
+                  onUpgrade={handleUpgrade}
                 />
               )}
               {view==='codes' && (
                 <MyQRCodes
+                  user={user}
                   version={codesVersion}
                   onCreateNew={openBuilder}
                   onEdit={openBuilder}
+                  onCountsChange={handleCountsChange}
+                  onUpgrade={handleUpgrade}
                 />
               )}
               {view==='builder' && (
@@ -481,6 +549,7 @@ export default function App(){
                   config={builderConfig}
                   onClose={() => { setBuilderConfig(null); setView(lastStableView || 'summary'); }}
                   onRefresh={() => setCodesVersion(v => v + 1)}
+                  onUpgrade={handleUpgrade}
                 />
               )}
             </div>

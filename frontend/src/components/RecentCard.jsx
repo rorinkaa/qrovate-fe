@@ -1,5 +1,6 @@
 import React from 'react';
 import { API } from '../api';
+import Icon from './ui/Icon.jsx';
 
 // Small presentational card to show the most recently created QR
 export default function RecentCard({ item, onEdit }) {
@@ -45,10 +46,26 @@ export default function RecentCard({ item, onEdit }) {
           </div>
           <div className="recent-actions">
             {id && (
-              <a className="icon-button" href={`${API}/qr/${id}`} target="_blank" rel="noreferrer" title="Open public link">🔗</a>
+              <a
+                className="icon-button"
+                href={`${API}/qr/${id}`}
+                target="_blank"
+                rel="noreferrer"
+                title="Open public link"
+              >
+                <Icon name="link" size={18} />
+              </a>
             )}
             {id && (
-              <a className="icon-button" href={`${API}/qr/svg/${id}`} target="_blank" rel="noreferrer" title="Open SVG">🖼️</a>
+              <a
+                className="icon-button"
+                href={`${API}/qr/svg/${id}`}
+                target="_blank"
+                rel="noreferrer"
+                title="Open SVG"
+              >
+                <Icon name="image" size={18} />
+              </a>
             )}
             <button className="btn-secondary small" onClick={() => onEdit && onEdit(item)}>Edit</button>
           </div>

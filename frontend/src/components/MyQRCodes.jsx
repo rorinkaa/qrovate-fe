@@ -1,9 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GlassCard from './ui/GlassCard.jsx';
+import Icon from './ui/Icon.jsx';
 import { api, API } from '../api';
 import { onItemSynced } from '../lib/syncQueue';
 import { buildPayload } from './TemplateDataForm.jsx';
 import { renderStyledQR } from '../lib/styledQr';
+import BulkQRGenerator from './BulkQRGenerator.jsx';
+import { FREE_PLAN_DYNAMIC_LIMIT, UPGRADES_ENABLED } from '../config/planLimits.js';
+
+import QRStats from './QRStats.jsx';
+import QRDownload from './QRDownload.jsx';
 
 // localStorage key per-user to avoid leaking designs between accounts
 const LEGACY_STATIC_KEY = 'qr_static_designs';
@@ -31,12 +37,25 @@ const STATIC_STYLE_DEFAULTS = {
   logoDataUrl: null
 };
 
-export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
+export default function MyQRCodes({ user, onCreateNew, onEdit, onCountsChange, onUpgrade, version = 0 }) {
   const [dynamicCodes, setDynamicCodes] = useState([]);
   const [staticDesigns, setStaticDesigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+
+  const [showBulkGenerator, setShowBulkGenerator] = useState(false);
+  const [planNotice, setPlanNotice] = useState('');
+  const isPro = !!user?.is_pro;
+  const dynamicLimit = user?.free_plan_dynamic_limit ?? FREE_PLAN_DYNAMIC_LIMIT;
+  const upgradesEnabled = UPGRADES_ENABLED;
+  const remainingDynamicSlots = isPro ? Infinity : Math.max(0, dynamicLimit - dynamicCodes.length);
+  const canCreateMoreDynamic = isPro || remainingDynamicSlots > 0;
+  const freeLimitMessage = useMemo(() => {
+    if (!upgradesEnabled || isPro) return '';
+    const plural = dynamicLimit === 1 ? '' : 's';
+    return `Free plan includes ${dynamicLimit} dynamic QR${plural}. Upgrade to Pro to add more.`;
+  }, [upgradesEnabled, dynamicLimit, isPro]);
 
   const formatRelative = useCallback((value) => {
     if (!value) return 'moments ago';
@@ -137,6 +156,43 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
     return () => { ignore = true; };
   }, [version]);
 
+  useEffect(() => {
+    if (!upgradesEnabled) {
+      if (planNotice) setPlanNotice('');
+      return;
+    }
+    if (canCreateMoreDynamic && planNotice) {
+      setPlanNotice('');
+    }
+  }, [upgradesEnabled, canCreateMoreDynamic, planNotice]);
+
+  useEffect(() => {
+    if (onCountsChange && !loading) {
+      onCountsChange({
+        dynamic: dynamicCodes.length,
+        staticCount: staticDesigns.length
+      });
+    }
+  }, [dynamicCodes.length, staticDesigns.length, onCountsChange, loading]);
+
+  const handleCreateDynamicRequest = () => {
+    if (upgradesEnabled && !canCreateMoreDynamic) {
+      if (freeLimitMessage) setPlanNotice(freeLimitMessage);
+      return;
+    }
+    setPlanNotice('');
+    onCreateNew?.({ type: 'dynamic-new', codeId: null });
+  };
+
+  const handleBulkGeneratorOpen = () => {
+    if (upgradesEnabled && !isPro && remainingDynamicSlots <= 0) {
+      if (freeLimitMessage) setPlanNotice(freeLimitMessage);
+      return;
+    }
+    setPlanNotice('');
+    setShowBulkGenerator(true);
+  };
+
   const handleDeleteStatic = useCallback((id) => {
     (async () => {
       // prefer server delete when possible
@@ -168,7 +224,26 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
           </p>
         </div>
         <div className="summary-actions">
-          <button className="btn-secondary ghost" onClick={() => onCreateNew?.({ type: 'dynamic-new', codeId: null })}>
+          {upgradesEnabled && !isPro && onUpgrade && (
+            <button className="btn-secondary" onClick={onUpgrade} type="button">
+              Upgrade to Pro
+            </button>
+          )}
+          <button
+            className="btn-secondary ghost btn-with-icon"
+            onClick={handleBulkGeneratorOpen}
+            disabled={!isPro && remainingDynamicSlots <= 0}
+            title={!isPro && remainingDynamicSlots <= 0 ? freeLimitMessage : undefined}
+          >
+            <Icon name="bulk" size={18} />
+            <span>Bulk Create</span>
+          </button>
+          <button
+            className="btn-secondary ghost"
+            onClick={handleCreateDynamicRequest}
+            disabled={!canCreateMoreDynamic}
+            title={!canCreateMoreDynamic ? freeLimitMessage : undefined}
+          >
             New dynamic QR
           </button>
           <button className="btn-primary" onClick={onStartStatic}>
@@ -177,13 +252,58 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
         </div>
       </GlassCard>
 
+      {upgradesEnabled && planNotice && (
+        <div className="plan-notice">
+          <div className="alert-error" role="alert">{planNotice}</div>
+          {!isPro && onUpgrade && (
+            <button type="button" className="btn-primary btn-upgrade" onClick={onUpgrade}>
+              Upgrade to Pro
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Bulk Generator Modal */}
+      {showBulkGenerator && (
+        <div className="modal-overlay" onClick={() => setShowBulkGenerator(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowBulkGenerator(false)}>×</button>
+            <BulkQRGenerator onSuccess={(results) => {
+              setShowBulkGenerator(false);
+              window.location.reload(); // Refresh to show new codes
+            }} />
+          </div>
+        </div>
+      )}
+
+
+
       <GlassCard className="library-card-grid">
         <header className="library-section-header">
           <div>
             <h3>Dynamic QR codes</h3>
-            <p>Synced from your backend. Edit destinations, download assets, or review scans.</p>
+            <div className="library-subtext">
+              Synced from your backend. Edit destinations, download assets, or review scans.
+              {!isPro && upgradesEnabled && (
+                <span className={`plan-inline-note${remainingDynamicSlots > 0 ? ' positive' : ''}`}>
+                  {remainingDynamicSlots > 0
+                    ? `Free plan includes ${dynamicLimit} dynamic QR${dynamicLimit === 1 ? '' : 's'}. You have ${remainingDynamicSlots} slot${remainingDynamicSlots === 1 ? '' : 's'} remaining.`
+                    : `Free plan includes ${dynamicLimit} dynamic QR${dynamicLimit === 1 ? '' : 's'}. Upgrade to unlock unlimited codes.`}
+                  {(!canCreateMoreDynamic) && onUpgrade && (
+                    <button type="button" className="btn-secondary upgrade-inline" onClick={onUpgrade}>
+                      Upgrade to Pro
+                    </button>
+                  )}
+                </span>
+              )}
+            </div>
           </div>
-          <button className="btn-secondary ghost" onClick={() => onCreateNew?.({ type: 'dynamic-new', codeId: null })}>
+          <button
+            className="btn-secondary ghost"
+            onClick={handleCreateDynamicRequest}
+            disabled={!canCreateMoreDynamic}
+            title={!canCreateMoreDynamic ? freeLimitMessage : undefined}
+          >
             Create new
           </button>
         </header>
@@ -251,7 +371,7 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
                         aria-label="Edit dynamic QR"
                         title="Edit dynamic QR"
                       >
-                        ✏️
+                        <Icon name="edit" size={18} />
                       </button>
                       <a
                         className="icon-button"
@@ -261,7 +381,7 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
                         aria-label="Open redirect link"
                         title="Open redirect link"
                       >
-                        🔗
+                        <Icon name="link" size={18} />
                       </a>
                       <a
                         className="icon-button"
@@ -271,8 +391,9 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
                         aria-label="Download SVG"
                         title="Download SVG"
                       >
-                        ⬇️
+                        <Icon name="download" size={18} />
                       </a>
+                      <QRDownload qrId={code.id} qrName={displayName} />
                       <button
                         type="button"
                         className={['icon-button', isExpanded ? 'active' : ''].join(' ')}
@@ -280,12 +401,13 @@ export default function MyQRCodes({ onCreateNew, onEdit, version = 0 }) {
                         aria-label={isExpanded ? 'Hide stats' : 'View stats'}
                         title={isExpanded ? 'Hide stats' : 'View stats'}
                       >
-                        📊
+                        <Icon name="stats" size={18} />
                       </button>
                     </div>
                   </div>
                   {isExpanded && (
                     <div className="code-row code-row-details">
+                      <QRStats qrId={code.id} />
                       <div className="code-details-grid">
                         <div>
                           <span>Created</span>
@@ -448,15 +570,23 @@ function StaticDesignRow({ design, onDelete, onRetry, formatRelative }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="tiny-spinner" aria-hidden="true" />
             <small style={{ color: '#64748b' }}>Syncing…</small>
-            <button className="icon-button" type="button" title="Retry sync" aria-label="Retry sync" onClick={() => {
-              try {
-                // add the design back into the persistent queue
-                const key = staticSaveKey();
-                const stored = JSON.parse(localStorage.getItem(key) || '[]');
-                const item = stored.find(s => s.id === design.id) || design;
-                import('../lib/syncQueue').then(mod => mod.addToQueue(item)).catch(() => { if (onRetry) onRetry(design.id); });
-              } catch (e) { if (onRetry) onRetry(design.id); }
-            }}>🔁</button>
+            <button
+              className="icon-button"
+              type="button"
+              title="Retry sync"
+              aria-label="Retry sync"
+              onClick={() => {
+                try {
+                  // add the design back into the persistent queue
+                  const key = staticSaveKey();
+                  const stored = JSON.parse(localStorage.getItem(key) || '[]');
+                  const item = stored.find(s => s.id === design.id) || design;
+                  import('../lib/syncQueue').then(mod => mod.addToQueue(item)).catch(() => { if (onRetry) onRetry(design.id); });
+                } catch (e) { if (onRetry) onRetry(design.id); }
+              }}
+            >
+              <Icon name="refresh" size={18} />
+            </button>
           </div>
         ) : (
           <>
@@ -467,7 +597,7 @@ function StaticDesignRow({ design, onDelete, onRetry, formatRelative }) {
               title="Download PNG"
               type="button"
             >
-              🖼️
+              <Icon name="image" size={18} />
             </button>
             <button
               className="icon-button"
@@ -476,7 +606,7 @@ function StaticDesignRow({ design, onDelete, onRetry, formatRelative }) {
               title="Download JPG"
               type="button"
             >
-              📸
+              <Icon name="camera" size={18} />
             </button>
             <button
               className="icon-button"
@@ -485,7 +615,7 @@ function StaticDesignRow({ design, onDelete, onRetry, formatRelative }) {
               title="Print PDF"
               type="button"
             >
-              📰
+              <Icon name="printer" size={18} />
             </button>
             <button
               className="icon-button"
@@ -494,7 +624,7 @@ function StaticDesignRow({ design, onDelete, onRetry, formatRelative }) {
               title="Download SVG"
               type="button"
             >
-              ⬇️
+              <Icon name="download" size={18} />
             </button>
             <button
               className="icon-button danger"
@@ -503,7 +633,7 @@ function StaticDesignRow({ design, onDelete, onRetry, formatRelative }) {
               title="Delete static design"
               type="button"
             >
-              🗑️
+              <Icon name="trash" size={18} />
             </button>
           </>
         )}

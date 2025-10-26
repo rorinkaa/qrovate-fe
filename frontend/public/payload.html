@@ -56,6 +56,18 @@
         addBtn(URL.createObjectURL(blob), 'Download contact (.vcf)');
         break;
       }
+      case 'PDF':
+        addBtn(ensureHttps(data), 'View PDF');
+        break;
+      case 'MP3':
+        // Create audio player for MP3
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.style.width = '100%';
+        audio.style.marginTop = '10px';
+        audio.src = ensureHttps(data);
+        payloadEl.appendChild(audio);
+        break;
       default:
         // For WiFi and others, show payload for copy
         break;

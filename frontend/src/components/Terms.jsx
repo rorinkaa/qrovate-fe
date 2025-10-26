@@ -1,4 +1,5 @@
 import React from 'react';
+import { FREE_PLAN_DYNAMIC_LIMIT, UPGRADES_ENABLED } from '../config/planLimits.js';
 
 const highlights = [
   { title: 'Fair use only', detail: 'No phishing, malware, harassment, or unlawful content is permitted on the platform.' },
@@ -8,6 +9,10 @@ const highlights = [
 ];
 
 export default function Terms() {
+  const freePlanCopy = UPGRADES_ENABLED
+    ? `Free plans include static QR creation and ${FREE_PLAN_DYNAMIC_LIMIT} dynamic QR${FREE_PLAN_DYNAMIC_LIMIT === 1 ? '' : 's'}. Paid plans unlock advanced styling, analytics, and collaboration tools.`
+    : 'Free plans currently include static and dynamic QR creation while paid tiers are unavailable.';
+
   return (
     <div className="legal-content">
       <header className="legal-header">
@@ -45,8 +50,7 @@ export default function Terms() {
       <section className="legal-section">
         <h3>3. Payments & Plans</h3>
         <p>
-          Free plans include static QR creation and limited dynamic codes. Paid plans unlock advanced styling, analytics,
-          and collaboration tools. Subscription fees are non-refundable once a billing period begins.
+          {freePlanCopy}
         </p>
       </section>
 

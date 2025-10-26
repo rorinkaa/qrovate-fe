@@ -1,4 +1,35 @@
+# Environment variables
 .env
+*.env.local
+*.env.*.local
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build outputs & caches
+dist/
+frontend/dist/
+.vite/
+frontend/.vite/
+frontend/.cache/
+frontend/.temp/
+coverage/
+frontend/coverage/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.log
+
+# Editors
+.DS_Store
+*.swp
+.idea/
+.vscode/
+/frontend/node_modules
+frontend/node_modules
 frontend/node_modules
 frontend/node_modules/.package-lock.json
 frontend/node_modules/.vite/deps/_metadata.json
@@ -37,4 +68,4 @@ frontend/node_modules/.vite/deps/_metadata.json
 frontend/node_modules/.package-lock.json
 frontend/node_modules/.vite/deps/_metadata.json
 frontend/node_modules/.bin/acorn
-.DS_Store
+frontend/node_modules/.bin/json5

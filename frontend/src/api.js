@@ -25,7 +25,11 @@ function readToken() {
   const direct = localStorage.getItem('token');
   if (direct) return direct;
 
-  // 3) namespaced qr_user
+  // 3) qr_token (used by this app)
+  const qrToken = localStorage.getItem('qr_token');
+  if (qrToken) return qrToken;
+
+  // 4) namespaced qr_user
   try {
     const raw = localStorage.getItem(`qr_user@${ns}`) || localStorage.getItem('qr_user') || 'null';
     const u = JSON.parse(raw);
@@ -81,4 +85,16 @@ export async function api(path, opts = {}) {
   }
 
   return res.json();
+}
+
+export async function startCheckout() {
+  return api('/billing/checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  });
+}
+
+export async function fetchProfile() {
+  return api('/auth/profile');
 }

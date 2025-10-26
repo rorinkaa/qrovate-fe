@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import InstantGenerator from './InstantGenerator.jsx';
+import HeroDemoPreview from './HeroDemoPreview.jsx';
 
 const FEATURE_CARDS = [
   {
@@ -70,41 +71,26 @@ export default function Homepage({ onRequestAuth }) {
         <div className="hero-gradient" />
         <div className="hero-inner">
           <div className="hero-copy">
-            <span className="hero-badge">Free QR code platform</span>
-            <h1>Create Beautiful, Free QR Codes — Instantly.</h1>
-            <p>No signup required. Download in PNG, SVG, or PDF. Free forever for static codes.</p>
+            <span className="hero-badge">Instant QR demo</span>
+            <h1>Launch polished QR journeys in minutes.</h1>
+            <p>
+              Design, test, and share scan-ready experiences without slowing your team down. Static downloads stay free,
+              dynamic upgrades flip on when you need them.
+            </p>
+            <ul className="hero-highlights">
+              <li>Live preview keeps your print files accurate and on brand</li>
+              <li>Convert to dynamic QR to unlock redirects, analytics, and teams</li>
+            </ul>
+            <div className="hero-trust-line">
+              <span className="hero-trust-dot" aria-hidden="true" />
+              <span>Trusted for 2.5M+ scans — built for marketers, no dev tickets required.</span>
+            </div>
             <div className="hero-actions">
-              <a className="btn-primary" href="#quick-generator">Start Generating</a>
-              <button className="btn-secondary ghost" onClick={() => onRequestAuth?.()}>Try Pro (Dynamic QR)</button>
-            </div>
-            <div className="hero-proof">
-              <strong>Trusted by 10,000+ creators &amp; small businesses</strong>
-              <div className="hero-logos">
-                {USE_CASES.map(use => (
-                  <span key={use} className="hero-logo">{use}</span>
-                ))}
-              </div>
+              <a className="btn-primary" href="#quick-generator">Start building</a>
+              <button className="btn-secondary ghost" onClick={() => onRequestAuth?.()}>Preview the dashboard</button>
             </div>
           </div>
-          <div className="hero-art" aria-hidden="true">
-            <div className="hero-carousel">
-              <div className="hero-card float-fast">
-                <div className="hero-card-qr" />
-                <div className="hero-card-caption">
-                  <span className="hero-card-label">Gradient QR</span>
-                  <span className="hero-card-meta">SVG • Logo badge</span>
-                </div>
-              </div>
-              <div className="hero-card float-med">
-                <div className="hero-card-qr alt" />
-                <div className="hero-card-caption">
-                  <span className="hero-card-label">Event Ticket</span>
-                  <span className="hero-card-meta">Dynamic • Scan stats</span>
-                </div>
-              </div>
-            </div>
-            <div className="hero-glow" />
-          </div>
+          <HeroDemoPreview />
         </div>
       </section>
 

@@ -1,6 +1,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import QRious from 'qrious';
+import FileUpload from './FileUpload.jsx';
 
 // Local libs (UMD style attached on window if needed)
 // import '../lib/qrcode-min'; // (placeholder for real generator if needed)
@@ -178,12 +179,14 @@ export default function AdvancedQRBuilder({ user }){
     setState(s=>({ ...s, type:t, values:{} }));
   }
 
-  function onLogo(e){
-    const f = e.target.files?.[0];
-    if(!f) return;
+  function onLogo(f){
     const reader = new FileReader();
     reader.onload = ()=> setState(s=>({ ...s, logo: reader.result }));
     reader.readAsDataURL(f);
+  }
+
+  function removeLogo(){
+    setState(s=>({ ...s, logo: null }));
   }
 
   function downloadPNG(){
@@ -242,7 +245,13 @@ export default function AdvancedQRBuilder({ user }){
           <div className="row">
             <label>Foreground <input type="color" value={state.foreground} onChange={e=>setState(s=>({...s,foreground:e.target.value}))}/></label>
             <label>Background <input type="color" value={state.background} onChange={e=>setState(s=>({...s,background:e.target.value}))}/></label>
-            <label>Logo <input type="file" accept="image/*" onChange={onLogo}/></label>
+            <FileUpload
+              accept="image/*"
+              maxSize={5 * 1024 * 1024}
+              onUpload={onLogo}
+              currentFile={state.logo}
+              onRemove={removeLogo}
+            />
           </div>
           {!isValid && <div className="error">Please fix invalid fields before generating.</div>}
         </div>

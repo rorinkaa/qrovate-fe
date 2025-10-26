@@ -1,9 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import QRious from 'qrious';
 import { api } from '../api';
 import { loadLocal, saveLocal } from '../utils';
+import FileUpload from './FileUpload.jsx';
 
 const PREVIEW_SIZE = 260;
+const DESTINATION_KEY = 'instant_destination';
+const FG_KEY = 'qr_fg';
+const BG_KEY = 'qr_bg';
 const SIZE_OPTIONS = [
   { label: 'Web • 256px', value: 256 },
   { label: 'Print • 512px', value: 512 },
@@ -36,10 +40,11 @@ function renderQr(canvas, value, { size, background, foreground, logo }) {
 export default function InstantGenerator({ isLoggedIn, onRequestAuth, showHeading = true }) {
   const params = new URLSearchParams(window.location.search);
   const prefill = params.get('prefill') || '';
-  const [text, setText] = useState(prefill || 'https://example.com');
+  const storedDestination = useMemo(() => loadLocal(DESTINATION_KEY, ''), []);
+  const [text, setText] = useState(prefill || storedDestination || 'https://example.com');
   const [downloadSize, setDownloadSize] = useState(SIZE_OPTIONS[0].value);
-  const [fg, setFg] = useState(loadLocal('qr_fg', '#000000'));
-  const [bg, setBg] = useState(loadLocal('qr_bg', '#ffffff'));
+  const [fg, setFg] = useState(loadLocal(FG_KEY, '#000000'));
+  const [bg, setBg] = useState(loadLocal(BG_KEY, '#ffffff'));
   const [logo, setLogo] = useState(null);
   const [svgBusy, setSvgBusy] = useState(false);
   const canvasRef = useRef(null);
@@ -48,16 +53,24 @@ export default function InstantGenerator({ isLoggedIn, onRequestAuth, showHeadin
     const canvas = canvasRef.current;
     if (!canvas) return;
     renderQr(canvas, text, { size: PREVIEW_SIZE, background: bg, foreground: fg, logo });
-    saveLocal('qr_fg', fg);
-    saveLocal('qr_bg', bg);
+    saveLocal(FG_KEY, fg);
+    saveLocal(BG_KEY, bg);
   }, [text, fg, bg, logo]);
 
-  function onLogoFile(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  useEffect(() => {
+    if (text) {
+      saveLocal(DESTINATION_KEY, text);
+    }
+  }, [text]);
+
+  function onLogoFile(file) {
     const reader = new FileReader();
     reader.onload = (ev) => setLogo(ev.target.result);
     reader.readAsDataURL(file);
+  }
+
+  function removeLogo() {
+    setLogo(null);
   }
 
   async function downloadPNG() {
@@ -107,7 +120,16 @@ export default function InstantGenerator({ isLoggedIn, onRequestAuth, showHeadin
           <div className="instant-header">
             <span className="eyebrow">Instant Generator</span>
             <h3>Drop in a link &amp; get a QR instantly</h3>
-            <p>Perfect for quick campaigns, menus, and stickers. Add your logo for extra polish.</p>
+            <p>
+              Perfect for quick campaigns, menus, and stickers.
+              <button
+                type="button"
+                className="instant-header-help"
+                onClick={() => window.open('/#how-it-works', '_self')}
+              >
+                See dynamic vs static
+              </button>
+            </p>
           </div>
         )}
 
@@ -115,7 +137,11 @@ export default function InstantGenerator({ isLoggedIn, onRequestAuth, showHeadin
           <form className="instant-controls" onSubmit={(e) => e.preventDefault()}>
             <label className="control-field">
               <span>Destination</span>
-              <input value={text} onChange={(e) => setText(e.target.value)} placeholder="https://yourdestinationsite.com" />
+              <input
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="https://yourdestinationsite.com"
+              />
             </label>
 
             <div className="size-options">
@@ -148,10 +174,13 @@ export default function InstantGenerator({ isLoggedIn, onRequestAuth, showHeadin
               </label>
             </div>
 
-            <label className="upload-pill">
-              <input type="file" accept="image/*" onChange={onLogoFile} />
-              <span>{logo ? 'Logo added — change?' : 'Upload logo (PNG/SVG)'}</span>
-            </label>
+            <FileUpload
+              accept="image/*"
+              maxSize={5 * 1024 * 1024}
+              onUpload={onLogoFile}
+              currentFile={logo}
+              onRemove={removeLogo}
+            />
 
             <div className="instant-note">
               <strong>SVG export is free once you sign up.</strong> No credit card required — unlock unlimited downloads and analytics.

@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, API } from '../api';
 import { renderStyledQR } from '../lib/styledQr';
 import { addToQueue } from '../lib/syncQueue';
-import TemplatePreview from './TemplatePreview.jsx';
+import TemplatePreview, { EditableTemplatePreview, LivePreview } from './TemplatePreview.jsx';
 import {
   TEMPLATES,
   TEMPLATE_DEFAULTS,
@@ -13,6 +13,9 @@ import {
 import GlassCard from './ui/GlassCard.jsx';
 import StepRail from './ui/StepRail.jsx';
 import SectionHeading from './ui/SectionHeading.jsx';
+import FileUpload from './FileUpload.jsx';
+import Icon from './ui/Icon.jsx';
+import { FREE_PLAN_DYNAMIC_LIMIT, UPGRADES_ENABLED } from '../config/planLimits.js';
 
 const STYLE_DEFAULTS = {
   size: 320,
@@ -88,6 +91,11 @@ const DYNAMIC_STEPS = [
   { id: 'review', title: STEP_COPY.dynamicReview.title, caption: STEP_COPY.dynamicReview.caption }
 ];
 
+const DYNAMIC_EDIT_STEPS = [
+  { id: 'goal', title: STEP_COPY.dynamicGoal.title, caption: STEP_COPY.dynamicGoal.caption },
+  { id: 'destination', title: STEP_COPY.dynamicDestination.title, caption: STEP_COPY.dynamicDestination.caption },
+  { id: 'review', title: STEP_COPY.dynamicReview.title, caption: STEP_COPY.dynamicReview.caption }
+];
 const STATIC_STEPS = [
   { id: 'type', title: STEP_COPY.choose.title, caption: STEP_COPY.choose.caption },
   { id: 'goal', title: STEP_COPY.staticGoal.title, caption: STEP_COPY.staticGoal.caption },
@@ -98,20 +106,20 @@ const STATIC_STEPS = [
 
 
 const TEMPLATE_META = {
-  URL: { emoji: '🔗', title: 'Website link', description: 'Send scanners to any landing page or CTA.' },
-  TEXT: { emoji: '💬', title: 'Text snippet', description: 'Show a note, Wi-Fi code, or promo instantly.' },
-  Email: { emoji: '✉️', title: 'Email draft', description: 'Prefill subject & body for quick replies.' },
-  SMS: { emoji: '📱', title: 'Text message', description: 'Trigger an SMS to your team or support line.' },
-  Phone: { emoji: '📞', title: 'Phone call', description: 'Dial a hotline or concierge in one tap.' },
-  Location: { emoji: '📍', title: 'Map destination', description: 'Open maps with directions to your venue.' },
-  Event: { emoji: '🗓️', title: 'Calendar invite', description: 'Add your event to Apple or Google calendars.' },
-  WiFi: { emoji: '📶', title: 'Wi‑Fi login', description: 'Share SSID and password without typing.' },
-  Vcard: { emoji: '👤', title: 'Contact card', description: 'Save your profile to phone contacts.' },
-  Whatsapp: { emoji: '💬', title: 'WhatsApp chat', description: 'Start a conversation with your team.' },
-  PDF: { emoji: '📄', title: 'PDF Document', description: 'Link to a PDF file for download or view.' },
-  MP3: { emoji: '🎵', title: 'Audio File', description: 'Link to an MP3 or audio file.' },
-  Voucher: { emoji: '🎟️', title: 'Discount Voucher', description: 'Share a promo code or voucher details.' },
-  PIX: { emoji: '💱', title: 'PIX payment', description: 'Collect payments via Brazil’s PIX system.' }
+  URL: { icon: 'link', title: 'Website link', description: 'Send scanners to any landing page or CTA.' },
+  TEXT: { icon: 'message', title: 'Text snippet', description: 'Show a note, Wi-Fi code, or promo instantly.' },
+  Email: { icon: 'envelope', title: 'Email draft', description: 'Prefill subject & body for quick replies.' },
+  SMS: { icon: 'sms', title: 'Text message', description: 'Trigger an SMS to your team or support line.' },
+  Phone: { icon: 'phone', title: 'Phone call', description: 'Dial a hotline or concierge in one tap.' },
+  Location: { icon: 'map', title: 'Map destination', description: 'Open maps with directions to your venue.' },
+  Event: { icon: 'calendar', title: 'Calendar invite', description: 'Add your event to Apple or Google calendars.' },
+  WiFi: { icon: 'wifi', title: 'Wi‑Fi login', description: 'Share SSID and password without typing.' },
+  Vcard: { icon: 'contact', title: 'Contact card', description: 'Save your profile to phone contacts.' },
+  Whatsapp: { icon: 'message', title: 'WhatsApp chat', description: 'Start a conversation with your team.' },
+  PDF: { icon: 'file', title: 'PDF Document', description: 'Link to a PDF file for download or view.' },
+  MP3: { icon: 'audio', title: 'Audio File', description: 'Link to an MP3 or audio file.' },
+  Voucher: { icon: 'ticket', title: 'Discount Voucher', description: 'Share a promo code or voucher details.' },
+  PIX: { icon: 'pix', title: 'PIX payment', description: 'Collect payments via Brazil’s PIX system.' }
 };
 
 function destinationSummary(type, values) {
@@ -147,12 +155,12 @@ function destinationSummary(type, values) {
       return values.summary ? `Calendar event: ${values.summary}` : 'Add event details for calendars.';
     }
     case 'PDF': {
-      const url = (values.url || '').trim();
-      return url ? normalizeUrl(url) : 'Add a PDF URL.';
+      const url = String(values.fileUrl || '').trim();
+      return url ? normalizeUrl(url) : 'Upload a PDF file.';
     }
     case 'MP3': {
-      const url = (values.url || '').trim();
-      return url ? normalizeUrl(url) : 'Add an audio URL.';
+      const url = String(values.fileUrl || '').trim();
+      return url ? normalizeUrl(url) : 'Upload an audio file.';
     }
     case 'Voucher': {
       return values.code ? `Voucher: ${values.code}` : 'Add voucher details.';
@@ -182,15 +190,21 @@ const renderStylePayload = (style, allowLogo) => {
   return safe;
 };
 
-export default function DynamicDashboard({ user, initialCodeId = null, initialType = null, onClose, onRefresh }) {
+export default function DynamicDashboard({ user, initialCodeId = null, initialType = null, onClose, onRefresh, onUpgrade }) {
   const [items, setItems] = useState([]);
   const [sel, setSel] = useState(null);
   const normalizeFlow = (type) => (type && String(type).startsWith('static') ? 'static' : 'dynamic');
-  const [flowType, setFlowType] = useState(normalizeFlow(initialType));
+  const normalizedInitialFlow = normalizeFlow(initialType);
+  const initialMode = initialCodeId ? 'edit' : 'create';
+  const initialSteps = normalizedInitialFlow === 'static'
+    ? STATIC_STEPS
+    : (initialMode === 'edit' ? DYNAMIC_EDIT_STEPS : DYNAMIC_STEPS);
+  const [mode, setMode] = useState(initialMode);
+  const [flowType, setFlowType] = useState(normalizedInitialFlow);
   const [tpl, setTpl] = useState('URL');
   const [values, setValues] = useState({ ...TEMPLATE_DEFAULTS.URL });
   const [style, setStyle] = useState({ ...STYLE_DEFAULTS });
-  const [qrName, setQrName] = useState(normalizeFlow(initialType) === 'static' ? 'New static QR' : 'New dynamic QR');
+  const [qrName, setQrName] = useState(normalizedInitialFlow === 'static' ? 'New static QR' : 'New dynamic QR');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
@@ -202,10 +216,43 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
   const [previewMode, setPreviewMode] = useState('qr');
   const draftsRef = useRef({});
   const prevSelRef = useRef(null);
+  const [lastCreatedId, setLastCreatedId] = useState(null);
+  const [planLimitError, setPlanLimitError] = useState(false);
   const isPro = !!user?.is_pro;
-  const [step, setStep] = useState(initialCodeId ? 1 : 0);
+  const upgradesEnabled = UPGRADES_ENABLED;
+  const planDynamicLimit = user?.free_plan_dynamic_limit ?? FREE_PLAN_DYNAMIC_LIMIT;
+  const limitApplies = upgradesEnabled && !isPro && Number.isFinite(planDynamicLimit);
+  const remainingDynamicSlots = useMemo(() => (
+    limitApplies ? Math.max(0, planDynamicLimit - items.length) : Infinity
+  ), [limitApplies, planDynamicLimit, items.length]);
+  const dynamicLimitReached = limitApplies && remainingDynamicSlots <= 0;
+  const freePlanLimitMessage = useMemo(() => {
+    if (!limitApplies) return '';
+    const plural = planDynamicLimit === 1 ? '' : 's';
+    return `Free plan includes ${planDynamicLimit} dynamic QR${plural}. Upgrade to Pro to add more.`;
+  }, [limitApplies, planDynamicLimit]);
+  const handleUpgradeClick = useCallback(() => {
+    if (upgradesEnabled && onUpgrade) onUpgrade();
+  }, [upgradesEnabled, onUpgrade]);
+  useEffect(() => {
+    setMode(initialCodeId ? 'edit' : 'create');
+  }, [initialCodeId]);
+  const initialStepIndex = (() => {
+    if (initialCodeId) {
+      const preferredId = 'goal';
+      const idx = initialSteps.findIndex(item => item.id === preferredId);
+      if (idx >= 0) return idx;
+    }
+    return 0;
+  })();
+  const [step, setStep] = useState(initialStepIndex);
   const isFreshFlow = !initialCodeId && (!initialType || String(initialType).includes('new'));
-  const steps = useMemo(() => (flowType === 'static' ? STATIC_STEPS : DYNAMIC_STEPS), [flowType]);
+  const isEditMode = mode === 'edit';
+  const editingDynamic = flowType === 'dynamic' && isEditMode;
+  const steps = useMemo(() => {
+    if (flowType === 'static') return STATIC_STEPS;
+    return editingDynamic ? DYNAMIC_EDIT_STEPS : DYNAMIC_STEPS;
+  }, [flowType, editingDynamic]);
   const safeStep = Math.min(step, steps.length - 1);
   const currentStep = steps[safeStep] || steps[0];
   const isDynamic = flowType === 'dynamic';
@@ -219,6 +266,32 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
     if (idx >= 0) setStep(idx);
   };
   const previewStartIndex = useMemo(() => steps.findIndex(item => item.id === 'goal'), [steps]);
+  const destinationStepIndex = useMemo(() => steps.findIndex(item => item.id === 'destination'), [steps]);
+  const hasBrandingStep = useMemo(() => steps.some(item => item.id === 'branding'), [steps]);
+  useEffect(() => {
+    const maxIndex = steps.length - 1;
+    setStep(prev => {
+      let next = Math.min(prev, maxIndex);
+      if (editingDynamic) {
+        const goalIdx = steps.findIndex(item => item.id === 'goal');
+        if (goalIdx >= 0 && next < goalIdx) {
+          next = goalIdx;
+        }
+      }
+      return next;
+    });
+  }, [steps, editingDynamic]);
+
+  useEffect(() => {
+    if (!limitApplies) {
+      if (planLimitError) setPlanLimitError(false);
+      return;
+    }
+    if (planLimitError && remainingDynamicSlots > 0) {
+      setPlanLimitError(false);
+      if (err === freePlanLimitMessage) setErr('');
+    }
+  }, [limitApplies, planLimitError, remainingDynamicSlots, err, freePlanLimitMessage]);
 
   useEffect(() => {
     (async () => {
@@ -267,18 +340,55 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
   useEffect(() => {
     draftsRef.current = {};
     if (!sel) {
+      setMode('create');
+      setLastCreatedId(null);
       setTpl('URL');
       setValues({ ...TEMPLATE_DEFAULTS.URL });
       setStyle({ ...STYLE_DEFAULTS });
       setQrName(flowType === 'static' ? 'New static QR' : 'New dynamic QR');
       return;
     }
+    const createdRecently = lastCreatedId && sel.id === lastCreatedId;
+    if (!createdRecently) setMode('edit');
     setStyle(prev => ({ ...prev, ...(sel.style || {}) }));
     setQrName(sel.name || 'Untitled QR');
     const target = sel.target || '';
+
+    // Detect template type from target URL
     if (target && !target.includes('/payload.html')) {
+      // Simple URL - assume URL template
       setTpl('URL');
       setValues({ ...TEMPLATE_DEFAULTS.URL, url: target });
+    } else if (target && target.includes('/payload.html')) {
+      // Complex payload - try to parse from URL params
+      try {
+        const url = new URL(target);
+        const type = url.searchParams.get('type');
+        const data = url.searchParams.get('data');
+        if (type && data) {
+          const decodedData = decodeURIComponent(data);
+          const parsedValues = JSON.parse(decodedData);
+          setTpl(type);
+          const defaults = TEMPLATE_DEFAULTS[type] || {};
+          const nextValues = { ...defaults, ...parsedValues };
+          if ((type === 'PDF' || type === 'MP3') && nextValues.fileUrl && !nextValues.fileName) {
+            try {
+              const parts = String(nextValues.fileUrl).split('/');
+              nextValues.fileName = decodeURIComponent(parts[parts.length - 1] || '');
+            } catch {
+              nextValues.fileName = '';
+            }
+          }
+          setValues(nextValues);
+        } else {
+          setTpl('URL');
+          setValues({ ...TEMPLATE_DEFAULTS.URL });
+        }
+      } catch (e) {
+        console.warn('Failed to parse payload URL:', target, e);
+        setTpl('URL');
+        setValues({ ...TEMPLATE_DEFAULTS.URL });
+      }
     } else {
       setTpl('URL');
       setValues({ ...TEMPLATE_DEFAULTS.URL });
@@ -291,18 +401,39 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
       return;
     }
     if (!sel) {
-      setStep(0);
+      prevSelRef.current = null;
+      if (isEditMode) {
+        const goalIndex = steps.findIndex(item => item.id === 'goal');
+        const fallbackStep = goalIndex >= 0 ? goalIndex : 0;
+        setStep(fallbackStep);
+      }
+      return;
+    }
+    if (!isEditMode) {
+      prevSelRef.current = sel;
+      return;
+    }
+    const prevId = prevSelRef.current?.id;
+    if (!prevId || prevId !== sel.id) {
+      const destinationIdx = steps.findIndex(item => item.id === 'destination');
+      if (destinationIdx >= 0) {
+        setStep(destinationIdx);
+      } else {
+        const goalIndex = steps.findIndex(item => item.id === 'goal');
+        if (goalIndex >= 0) setStep(goalIndex);
+      }
     }
     prevSelRef.current = sel;
-  }, [sel, isDynamic]);
+  }, [sel, isDynamic, isEditMode, steps]);
 
+  const brandingIndex = useMemo(() => steps.findIndex(item => item.id === 'branding'), [steps]);
   useEffect(() => {
-    if (previewStartIndex >= 0 && safeStep === previewStartIndex) {
-      setPreviewMode('content');
-    } else {
-      setPreviewMode('qr');
-    }
-  }, [safeStep, flowType, sel?.id, previewStartIndex]);
+    const withinContent =
+      previewStartIndex >= 0 &&
+      safeStep >= previewStartIndex &&
+      (brandingIndex === -1 || safeStep < brandingIndex);
+    setPreviewMode(withinContent ? 'content' : 'qr');
+  }, [safeStep, flowType, sel?.id, previewStartIndex, brandingIndex]);
 
   useEffect(() => {
     const canvas = previewRef.current;
@@ -381,9 +512,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
 
   const onNameChange = (value) => setQrName(value);
 
-  const onLogoUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const onLogoUpload = (file) => {
     const reader = new FileReader();
     reader.onload = () => {
       onStyleChange('logoDataUrl', reader.result);
@@ -546,9 +675,15 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
   };
 
   const createDynamic = async ({ autoAdvance = true } = {}) => {
+    if (dynamicLimitReached) {
+      setPlanLimitError(true);
+      if (freePlanLimitMessage) setErr(freePlanLimitMessage);
+      return null;
+    }
     setBusy(true);
     setMsg('');
     setErr('');
+    setPlanLimitError(false);
     try {
       const stylePayload = renderStylePayload(style, isPro);
       const created = await api('/qr/create', {
@@ -559,14 +694,31 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
       const normalized = { ...created, style: created.style || {} };
       setItems(prev => [normalized, ...prev]);
       setSel(normalized);
+      setLastCreatedId(normalized.id);
+      setMode('create');
       setMsg('Dynamic QR created. Configure the destination and click “Save changes”.');
       if (autoAdvance) {
-        setStep(1);
+        const nextDestinationIndex = destinationStepIndex >= 0 ? destinationStepIndex : Math.min(steps.length - 1, 1);
+        setStep(nextDestinationIndex);
       }
       onRefresh?.();
       return normalized;
     } catch (e) {
-      setErr(e.message || 'Create failed');
+      if (e?.status === 403 && e?.code === 'PLAN_LIMIT_DYNAMIC') {
+        setPlanLimitError(true);
+        const remaining = typeof e?.details?.remaining === 'number' ? e.details.remaining : 0;
+        if (remaining > 0) {
+          const plural = remaining === 1 ? '' : 's';
+          setErr(`Free plan can add ${remaining} more dynamic QR${plural}. Try a smaller batch or upgrade for unlimited codes.`);
+        } else if (freePlanLimitMessage) {
+          setErr(freePlanLimitMessage);
+        } else {
+          setErr(e.message || 'Plan limit reached.');
+        }
+      } else {
+        setPlanLimitError(false);
+        setErr(e.message || 'Create failed');
+      }
       return null;
     } finally {
       setBusy(false);
@@ -584,7 +736,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
       if (tpl === 'URL') {
         target = normalizeUrl(payload);
       } else {
-        const url = `${window.location.origin}/payload.html?type=${encodeURIComponent(tpl)}&data=${encodeURIComponent(payload)}`;
+        const url = `${window.location.origin}/payload.html?type=${encodeURIComponent(tpl)}&data=${encodeURIComponent(JSON.stringify(values))}`;
         target = url;
       }
       const stylePayload = renderStylePayload(style, isPro);
@@ -670,7 +822,9 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                   setFlowType('dynamic');
                 }}
               >
-                <span className="template-icon">📊</span>
+                <span className="template-icon">
+                  <Icon name="chart" size={18} />
+                </span>
                 <div className="template-body">
                   <strong>Dynamic code</strong>
                   <p>Change destinations anytime, capture scan analytics, and manage codes from the library.</p>
@@ -679,15 +833,19 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
               </button>
               <button
                 type="button"
-                className={['template-card', !isDynamic ? 'active' : ''].join(' ')}
+                className={['template-card', !isDynamic ? 'active' : '', sel ? 'disabled' : ''].join(' ')}
+                disabled={!!sel}
                 onClick={() => {
-                  setFlowType('static');
+                  if (!sel) setFlowType('static');
                 }}
               >
-                <span className="template-icon">⚡</span>
+                <span className="template-icon">
+                  <Icon name="lightning" size={18} />
+                </span>
                 <div className="template-body">
                   <strong>Static code</strong>
                   <p>Embed the payload directly in the QR, perfect for print-ready Wi-Fi, text, or contact details.</p>
+                  {sel && <small style={{ color: '#ef4444' }}>Cannot switch to static when editing existing QR</small>}
                 </div>
                 <span className="template-chevron">→</span>
               </button>
@@ -705,6 +863,8 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
         );
       }
       case 'goal': {
+        const isCreatingNewDynamic = isDynamic && !sel;
+        const continueDisabled = (!qrName.trim()) || (isCreatingNewDynamic && (busy || dynamicLimitReached));
         return (
           <GlassCard className="dynamic-step-card">
             <SectionHeading
@@ -714,6 +874,18 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                 ? 'Give this QR a memorable name and pick a template that matches how you plan to use it.'
                 : 'Name your QR and select the content template you want to embed.'}
             />
+            {!isPro && (
+              <div className={`plan-inline-note${!dynamicLimitReached ? ' positive' : ''}`} style={{ marginBottom: 16 }}>
+                {dynamicLimitReached
+                  ? freePlanLimitMessage
+                  : `You can create ${remainingDynamicSlots} more dynamic QR${remainingDynamicSlots === 1 ? '' : 's'} on the free plan.`}
+                {dynamicLimitReached && onUpgrade && (
+                  <button type="button" className="btn-secondary upgrade-inline" onClick={handleUpgradeClick}>
+                    Upgrade to Pro
+                  </button>
+                )}
+              </div>
+            )}
             <label className="control-field">
               <span>QR name</span>
               <input
@@ -723,7 +895,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
               />
             </label>
             <div className="template-grid">
-              {TEMPLATES.slice(0, 12).map(template => {
+              {TEMPLATES.slice(0, 13).map(template => {
                 const meta = templateMeta(template);
                 const active = tpl === template;
                 return (
@@ -733,10 +905,15 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                     className={['template-card', active ? 'active' : ''].join(' ')}
                     onClick={() => {
                       selectTemplate(template);
-                      if (sel) setStep(1);
+                      if (sel) {
+                        const index = destinationStepIndex >= 0 ? destinationStepIndex : Math.min(steps.length - 1, 1);
+                        setStep(index);
+                      }
                     }}
                   >
-                    <span className="template-icon">{meta.emoji}</span>
+                    <span className="template-icon">
+                      <Icon name={meta.icon} size={18} />
+                    </span>
                     <div className="template-body">
                       <strong>{meta.title}</strong>
                       <p>{meta.description}</p>
@@ -750,10 +927,12 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
               <button
                 className="btn-primary"
                 onClick={() => advanceTo('destination')}
-                disabled={(isDynamic && busy && !sel) || !qrName.trim()}
+                disabled={continueDisabled}
               >
                 {isDynamic
-                  ? (!sel ? (busy ? 'Creating…' : 'Create & continue') : 'Continue to destination')
+                  ? (isCreatingNewDynamic
+                      ? (dynamicLimitReached ? 'Upgrade required' : (busy ? 'Creating…' : 'Create & continue'))
+                      : 'Continue to destination')
                   : 'Continue to content'}
               </button>
             </div>
@@ -789,7 +968,12 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
             <TemplateDataForm type={tpl} values={values} onChange={onValueChange} />
             <div className="dynamic-step-actions">
               <button className="btn-secondary ghost" onClick={() => goToStepId('goal')}>Back</button>
-              <button className="btn-primary" onClick={() => goToStepId('branding')}>Next: Branding</button>
+              <button
+                className="btn-primary"
+                onClick={() => goToStepId(hasBrandingStep ? 'branding' : 'review')}
+              >
+                {hasBrandingStep ? 'Next: Branding' : 'Continue to review'}
+              </button>
             </div>
           </GlassCard>
         );
@@ -914,12 +1098,17 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                 <p className="style-hint">{isPro ? 'Upload a logo to boost brand recognition.' : 'Upgrade to Pro to unlock logo overlays.'}</p>
                 {isPro ? (
                   <div className="style-row">
-                    <input type="file" accept="image/*" onChange={onLogoUpload} />
+                    <FileUpload
+                      accept="image/*"
+                      maxSize={5 * 1024 * 1024}
+                      onUpload={onLogoUpload}
+                      currentFile={style.logoDataUrl}
+                      onRemove={removeLogo}
+                    />
                     <label className="control-field">
                       <span>Size</span>
                       <input type="range" min="0.15" max="0.35" step="0.01" value={style.logoSizeRatio} onChange={e=>onStyleChange('logoSizeRatio', parseFloat(e.target.value))} />
                     </label>
-                    {style.logoDataUrl && <button type="button" className="btn-secondary ghost" onClick={removeLogo}>Remove logo</button>}
                   </div>
                 ) : (
                   <div className="small">Logos are reserved for Pro plans.</div>
@@ -1088,7 +1277,16 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
           </div>
           {(err || msg) && (
             <div className="dynamic-feedback">
-              {err && <div className="alert-error">{err}</div>}
+              {err && (
+                <div className="alert-error" role="alert">
+                  {err}
+                  {planLimitError && onUpgrade && (
+                    <button type="button" className="btn-secondary upgrade-inline" onClick={handleUpgradeClick}>
+                      Upgrade to Pro
+                    </button>
+                  )}
+                </div>
+              )}
               {msg && <div className="alert-success">{msg}</div>}
             </div>
           )}
@@ -1132,7 +1330,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                 <div className="preview-phone">
                   <div className="preview-phone-notch" />
                   <div className="preview-phone-screen">
-                    <TemplatePreview type={tpl} values={values} variant="phone" />
+                    <LivePreview type={tpl} values={values} variant="phone" />
                   </div>
                 </div>
               )}

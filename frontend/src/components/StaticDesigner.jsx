@@ -8,6 +8,7 @@ import {
   buildPayload,
   TemplateDataForm
 } from './TemplateDataForm.jsx';
+import FileUpload from './FileUpload.jsx';
 
 const STYLE_DEFAULTS = {
   size: 320,
@@ -138,13 +139,13 @@ export default function StaticDesigner({ isPro }) {
     setTpl(next);
   };
 
-  const onLogo = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const onLogo = (file) => {
     const reader = new FileReader();
     reader.onload = () => setLogo(reader.result);
     reader.readAsDataURL(file);
   };
+
+  const removeLogo = () => setLogo(null);
 
   const planCopy = isPro ? 'Unlimited exports and logo overlays unlocked.' : 'Free plan: download PNG and save up to 3 designs — upgrade for SVG and analytics.';
 
@@ -340,11 +341,16 @@ export default function StaticDesigner({ isPro }) {
         <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>Logo Overlay</div>
         {isPro ? (
           <div className="row wrap" style={{ gap: 12 }}>
-            <input type="file" accept="image/*" onChange={onLogo} />
+            <FileUpload
+              accept="image/*"
+              maxSize={5 * 1024 * 1024}
+              onUpload={onLogo}
+              currentFile={logo}
+              onRemove={removeLogo}
+            />
             <label className="small" style={{ display: 'flex', flexDirection: 'column' }}>Size
               <input type="range" min="0.15" max="0.35" step="0.01" value={logoSize} onChange={e => setLogoSize(parseFloat(e.target.value))} />
             </label>
-            {logo && <button onClick={() => setLogo(null)}>Remove Logo</button>}
           </div>
         ) : (
           <div className="small">Upgrade to Pro to add a logo overlay</div>
