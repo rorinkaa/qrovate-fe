@@ -121,6 +121,24 @@ export const TEMPLATE_LIBRARY = [
     accentSoft: 'rgba(124, 58, 237, 0.16)'
   },
   {
+    id: 'AppLink',
+    title: 'App smart link',
+    description: 'Send people to the right app store with one scan.',
+    icon: 'smartphone',
+    category: 'links',
+    accent: '#2563eb',
+    accentSoft: 'rgba(37, 99, 235, 0.16)'
+  },
+  {
+    id: 'Gallery',
+    title: 'Gallery or menu',
+    description: 'Showcase dishes, projects, or products beautifully.',
+    icon: 'image',
+    category: 'content',
+    accent: '#ec4899',
+    accentSoft: 'rgba(236, 72, 153, 0.18)'
+  },
+  {
     id: 'Voucher',
     title: 'Discount Voucher',
     description: 'Share a promo code or voucher details.',
@@ -190,18 +208,109 @@ export const TEMPLATES = TEMPLATE_LIBRARY.map(item => item.id);
 
 export const TEMPLATE_DEFAULTS = {
   URL: { url: '' },
-  TEXT: { text: '' },
+  TEXT: {
+    text: '',
+    headline: '',
+    subheadline: '',
+    accentColor: '#6366f1',
+    backgroundImage: '',
+    ctaLabel: '',
+    ctaUrl: '',
+    secondaryCtaLabel: '',
+    secondaryCtaUrl: '',
+    highlightText: '',
+    bulletPoints: ''
+  },
   Phone: { phone: '' },
   SMS: { to: '', body: '' },
   Email: { to: '', subject: '', body: '' },
   Whatsapp: { phone: '', text: '' },
   Facetime: { target: '' },
   Location: { lat: '', lng: '', query: '' },
-  WiFi: { ssid: '', password: '', auth: 'WPA', hidden: false },
-  Event: { summary: '', start: '', end: '', location: '', description: '' },
-  Vcard: { first: '', last: '', title: '', org: '', email: '', phone: '', address: '', url: '' },
-  PDF: { fileUrl: '', fileName: '', backgroundColor: '#ffffff', textColor: '#000000', accentColor: '#2563eb' },
-  MP3: { fileUrl: '', fileName: '', backgroundColor: '#f1f5f9', textColor: '#475569', accentColor: '#2563eb' },
+  WiFi: { ssid: '', password: '', auth: 'WPA', hidden: false, venue: '', notes: '' },
+  Event: {
+    summary: '',
+    start: '',
+    end: '',
+    location: '',
+    description: '',
+    timezone: '',
+    heroImage: '',
+    ctaLabel: '',
+    ctaUrl: '',
+    agenda: '',
+    mapUrl: '',
+    dressCode: ''
+  },
+  Vcard: {
+    first: '',
+    last: '',
+    title: '',
+    org: '',
+    email: '',
+    phone: '',
+    address: '',
+    url: '',
+    avatarUrl: '',
+    pronouns: '',
+    bio: '',
+    linkedin: '',
+    twitter: '',
+    instagram: '',
+    facebook: ''
+  },
+  PDF: {
+    fileUrl: '',
+    fileName: '',
+    backgroundColor: '#ffffff',
+    textColor: '#000000',
+    accentColor: '#2563eb',
+    title: '',
+    description: '',
+    version: '',
+    updatedAt: '',
+    fileSize: '',
+    thumbnailUrl: '',
+    tags: '',
+    notes: ''
+  },
+  MP3: {
+    fileUrl: '',
+    fileName: '',
+    backgroundColor: '#0f172a',
+    textColor: '#e2e8f0',
+    accentColor: '#38bdf8',
+    title: '',
+    artist: '',
+    album: '',
+    coverUrl: '',
+    heroImage: '',
+    description: '',
+    streamingLinks: '',
+    moreTracks: ''
+  },
+  AppLink: {
+    headline: '',
+    subheadline: '',
+    iosUrl: '',
+    androidUrl: '',
+    macUrl: '',
+    windowsUrl: '',
+    fallbackUrl: '',
+    accentColor: '#2563eb',
+    backgroundImage: '',
+    features: '',
+    storeBadges: ''
+  },
+  Gallery: {
+    title: '',
+    intro: '',
+    featuredImage: '',
+    highlightCategory: '',
+    items: '',
+    ctaLabel: '',
+    ctaUrl: ''
+  },
   Voucher: { code: '', description: '', expiry: '' },
   Crypto: { symbol: 'BTC', address: '', amount: '' },
   PayPal: { username: '', amount: '' },
@@ -338,6 +447,10 @@ export function buildPayload(type, v = {}) {
     }
     case 'PIX Payment':
       return v.payload || '';
+    case 'AppLink':
+      return normalizeUrl(v.fallbackUrl || v.iosUrl || v.androidUrl || v.windowsUrl || v.macUrl || '');
+    case 'Gallery':
+      return normalizeUrl(v.ctaUrl || '');
     default:
       return '';
   }
@@ -378,9 +491,41 @@ export function TemplateDataForm({ type, values, onChange }) {
       );
     case 'TEXT':
       return (
-        <Field label="Text">
-          {multilineTextarea(values.text || '', e => onChange('text', e.target.value), 'Write any message')}
-        </Field>
+        <>
+          <Field label="Headline">
+            <input value={values.headline || ''} onChange={e => onChange('headline', e.target.value)} placeholder="Share your headline" />
+          </Field>
+          <Field label="Subheadline">
+            <input value={values.subheadline || ''} onChange={e => onChange('subheadline', e.target.value)} placeholder="Optional supporting copy" />
+          </Field>
+          <Field label="Highlight text">
+            <input value={values.highlightText || ''} onChange={e => onChange('highlightText', e.target.value)} placeholder="Key stat or short punchline" />
+          </Field>
+          <Field label="Body">
+            {multilineTextarea(values.text || '', e => onChange('text', e.target.value), 'Write announcements, offers, or rich descriptions')}
+          </Field>
+          <Field label="Bullet points (one per line)">
+            {multilineTextarea(values.bulletPoints || '', e => onChange('bulletPoints', e.target.value), 'Feature one\nFeature two\nFeature three')}
+          </Field>
+          <Field label="Primary button label">
+            <input value={values.ctaLabel || ''} onChange={e => onChange('ctaLabel', e.target.value)} placeholder="Get started" />
+          </Field>
+          <Field label="Primary button link">
+            <input value={values.ctaUrl || ''} onChange={e => onChange('ctaUrl', e.target.value)} placeholder="https://example.com/signup" />
+          </Field>
+          <Field label="Secondary link label">
+            <input value={values.secondaryCtaLabel || ''} onChange={e => onChange('secondaryCtaLabel', e.target.value)} placeholder="View pricing" />
+          </Field>
+          <Field label="Secondary link URL">
+            <input value={values.secondaryCtaUrl || ''} onChange={e => onChange('secondaryCtaUrl', e.target.value)} placeholder="https://example.com/pricing" />
+          </Field>
+          <Field label="Accent color">
+            <input type="color" value={values.accentColor || '#6366f1'} onChange={e => onChange('accentColor', e.target.value)} />
+          </Field>
+          <Field label="Background image URL">
+            <input value={values.backgroundImage || ''} onChange={e => onChange('backgroundImage', e.target.value)} placeholder="https://.../hero.jpg" />
+          </Field>
+        </>
       );
     case 'Phone':
       return (
@@ -467,6 +612,12 @@ export function TemplateDataForm({ type, values, onChange }) {
             <input type="checkbox" checked={!!values.hidden} onChange={e => onChange('hidden', e.target.checked)} />
             <span style={{ marginLeft: 6 }}>Hidden network</span>
           </label>
+          <Field label="Venue or location (optional)">
+            <input value={values.venue || ''} onChange={e => onChange('venue', e.target.value)} placeholder="Lobby, Conference room B..." />
+          </Field>
+          <Field label="Extra notes for guests">
+            {multilineTextarea(values.notes || '', e => onChange('notes', e.target.value), 'Share hours, limits, or friendly reminders')}
+          </Field>
         </>
       );
     case 'Event':
@@ -474,6 +625,9 @@ export function TemplateDataForm({ type, values, onChange }) {
         <>
           <Field label="Event title">
             <input value={values.summary || ''} onChange={e => onChange('summary', e.target.value)} placeholder="Event name" />
+          </Field>
+          <Field label="Timezone">
+            <input value={values.timezone || ''} onChange={e => onChange('timezone', e.target.value)} placeholder="e.g. PST, GMT+1" />
           </Field>
           <Field label="Starts at">
             <input type="datetime-local" value={values.start || ''} onChange={e => onChange('start', e.target.value)} />
@@ -486,6 +640,24 @@ export function TemplateDataForm({ type, values, onChange }) {
           </Field>
           <Field label="Description">
             {multilineTextarea(values.description || '', e => onChange('description', e.target.value), 'Agenda, notes, dress code...')}
+          </Field>
+          <Field label="Hero image URL">
+            <input value={values.heroImage || ''} onChange={e => onChange('heroImage', e.target.value)} placeholder="https://.../hero.jpg" />
+          </Field>
+          <Field label="Map embed or image URL">
+            <input value={values.mapUrl || ''} onChange={e => onChange('mapUrl', e.target.value)} placeholder="https://maps.google.com/..." />
+          </Field>
+          <Field label="Dress code or reminders">
+            <input value={values.dressCode || ''} onChange={e => onChange('dressCode', e.target.value)} placeholder="Business casual" />
+          </Field>
+          <Field label="Agenda items (one per line)">
+            {multilineTextarea(values.agenda || '', e => onChange('agenda', e.target.value), '10:00 - Registration\n10:30 - Keynote\n12:00 - Lunch')}
+          </Field>
+          <Field label="Primary CTA label">
+            <input value={values.ctaLabel || ''} onChange={e => onChange('ctaLabel', e.target.value)} placeholder="RSVP now" />
+          </Field>
+          <Field label="Primary CTA link">
+            <input value={values.ctaUrl || ''} onChange={e => onChange('ctaUrl', e.target.value)} placeholder="https://example.com/rsvp" />
           </Field>
         </>
       );
@@ -515,6 +687,27 @@ export function TemplateDataForm({ type, values, onChange }) {
           </Field>
           <Field label="Website">
             <input value={values.url || ''} onChange={e => onChange('url', e.target.value)} placeholder="https://example.com" />
+          </Field>
+          <Field label="Avatar image URL">
+            <input value={values.avatarUrl || ''} onChange={e => onChange('avatarUrl', e.target.value)} placeholder="https://.../headshot.jpg" />
+          </Field>
+          <Field label="Pronouns">
+            <input value={values.pronouns || ''} onChange={e => onChange('pronouns', e.target.value)} placeholder="she/her" />
+          </Field>
+          <Field label="Short bio">
+            {multilineTextarea(values.bio || '', e => onChange('bio', e.target.value), 'Share what you do, areas of expertise, or a friendly welcome')}
+          </Field>
+          <Field label="LinkedIn URL">
+            <input value={values.linkedin || ''} onChange={e => onChange('linkedin', e.target.value)} placeholder="https://linkedin.com/in/username" />
+          </Field>
+          <Field label="Twitter / X URL">
+            <input value={values.twitter || ''} onChange={e => onChange('twitter', e.target.value)} placeholder="https://x.com/username" />
+          </Field>
+          <Field label="Instagram URL">
+            <input value={values.instagram || ''} onChange={e => onChange('instagram', e.target.value)} placeholder="https://instagram.com/username" />
+          </Field>
+          <Field label="Facebook URL">
+            <input value={values.facebook || ''} onChange={e => onChange('facebook', e.target.value)} placeholder="https://facebook.com/username" />
           </Field>
         </>
       );
@@ -564,6 +757,30 @@ export function TemplateDataForm({ type, values, onChange }) {
           <Field label="Accent Color">
             <input type="color" value={values.accentColor || '#2563eb'} onChange={e => onChange('accentColor', e.target.value)} />
           </Field>
+          <Field label="Document title">
+            <input value={values.title || ''} onChange={e => onChange('title', e.target.value)} placeholder="Product brochure 2024" />
+          </Field>
+          <Field label="Short description">
+            {multilineTextarea(values.description || '', e => onChange('description', e.target.value), 'Summarise what readers will find inside.')}
+          </Field>
+          <Field label="Version">
+            <input value={values.version || ''} onChange={e => onChange('version', e.target.value)} placeholder="v2.1" />
+          </Field>
+          <Field label="Last updated">
+            <input value={values.updatedAt || ''} onChange={e => onChange('updatedAt', e.target.value)} placeholder="2024-06-01" />
+          </Field>
+          <Field label="File size">
+            <input value={values.fileSize || ''} onChange={e => onChange('fileSize', e.target.value)} placeholder="2.3 MB" />
+          </Field>
+          <Field label="Metadata tags (comma separated)">
+            <input value={values.tags || ''} onChange={e => onChange('tags', e.target.value)} placeholder="Launch, Internal, V2" />
+          </Field>
+          <Field label="Preview thumbnail URL">
+            <input value={values.thumbnailUrl || ''} onChange={e => onChange('thumbnailUrl', e.target.value)} placeholder="https://.../thumb.png" />
+          </Field>
+          <Field label="Version notes (one per line)">
+            {multilineTextarea(values.notes || '', e => onChange('notes', e.target.value), '✅ Added section on pricing\n⚙️ Updated installation steps')}
+          </Field>
         </>
       );
     case 'MP3':
@@ -604,13 +821,101 @@ export function TemplateDataForm({ type, values, onChange }) {
             />
           </Field>
           <Field label="Background Color">
-            <input type="color" value={values.backgroundColor || '#f1f5f9'} onChange={e => onChange('backgroundColor', e.target.value)} />
+            <input type="color" value={values.backgroundColor || '#0f172a'} onChange={e => onChange('backgroundColor', e.target.value)} />
           </Field>
           <Field label="Text Color">
-            <input type="color" value={values.textColor || '#475569'} onChange={e => onChange('textColor', e.target.value)} />
+            <input type="color" value={values.textColor || '#e2e8f0'} onChange={e => onChange('textColor', e.target.value)} />
           </Field>
           <Field label="Accent Color">
+            <input type="color" value={values.accentColor || '#38bdf8'} onChange={e => onChange('accentColor', e.target.value)} />
+          </Field>
+          <Field label="Track title">
+            <input value={values.title || ''} onChange={e => onChange('title', e.target.value)} placeholder="Single name" />
+          </Field>
+          <Field label="Artist">
+            <input value={values.artist || ''} onChange={e => onChange('artist', e.target.value)} placeholder="Artist name" />
+          </Field>
+          <Field label="Album or release">
+            <input value={values.album || ''} onChange={e => onChange('album', e.target.value)} placeholder="Album title (optional)" />
+          </Field>
+          <Field label="Cover art URL">
+            <input value={values.coverUrl || ''} onChange={e => onChange('coverUrl', e.target.value)} placeholder="https://.../cover.jpg" />
+          </Field>
+          <Field label="Hero background URL">
+            <input value={values.heroImage || ''} onChange={e => onChange('heroImage', e.target.value)} placeholder="https://.../background.jpg" />
+          </Field>
+          <Field label="Track description">
+            {multilineTextarea(values.description || '', e => onChange('description', e.target.value), 'Tell listeners what they should know.')}
+          </Field>
+          <Field label="Streaming links (one per line: label|url)">
+            {multilineTextarea(values.streamingLinks || '', e => onChange('streamingLinks', e.target.value), 'Spotify|https://open.spotify.com/...\nApple Music|https://music.apple.com/...')}
+          </Field>
+          <Field label="More from the artist (one per line: title|duration|url)">
+            {multilineTextarea(values.moreTracks || '', e => onChange('moreTracks', e.target.value), 'Acoustic Sessions|3:21|https://example.com/a\nBehind the scenes|2:48|https://example.com/b')}
+          </Field>
+        </>
+      );
+    case 'AppLink':
+      return (
+        <>
+          <Field label="Headline">
+            <input value={values.headline || ''} onChange={e => onChange('headline', e.target.value)} placeholder="Your app, everywhere" />
+          </Field>
+          <Field label="Subheadline">
+            <input value={values.subheadline || ''} onChange={e => onChange('subheadline', e.target.value)} placeholder="Explain what scanners unlock after installing." />
+          </Field>
+          <Field label="iOS App Store link">
+            <input value={values.iosUrl || ''} onChange={e => onChange('iosUrl', e.target.value)} placeholder="https://apps.apple.com/..." />
+          </Field>
+          <Field label="Google Play link">
+            <input value={values.androidUrl || ''} onChange={e => onChange('androidUrl', e.target.value)} placeholder="https://play.google.com/store/apps/details?id=..." />
+          </Field>
+          <Field label="Mac App Store link (optional)">
+            <input value={values.macUrl || ''} onChange={e => onChange('macUrl', e.target.value)} placeholder="https://apps.apple.com/app/id..." />
+          </Field>
+          <Field label="Windows / Web fallback link">
+            <input value={values.windowsUrl || ''} onChange={e => onChange('windowsUrl', e.target.value)} placeholder="https://example.com/download" />
+          </Field>
+          <Field label="Fallback web URL">
+            <input value={values.fallbackUrl || ''} onChange={e => onChange('fallbackUrl', e.target.value)} placeholder="https://example.com" />
+          </Field>
+          <Field label="Accent color">
             <input type="color" value={values.accentColor || '#2563eb'} onChange={e => onChange('accentColor', e.target.value)} />
+          </Field>
+          <Field label="Background image URL">
+            <input value={values.backgroundImage || ''} onChange={e => onChange('backgroundImage', e.target.value)} placeholder="https://.../screenshot.jpg" />
+          </Field>
+          <Field label="Feature highlights (one per line)">
+            {multilineTextarea(values.features || '', e => onChange('features', e.target.value), 'One tap check-in\nSmart notifications\nOffline access')}
+          </Field>
+          <Field label="Store badges (one per line: label|url)">
+            {multilineTextarea(values.storeBadges || '', e => onChange('storeBadges', e.target.value), 'App Store|https://apps.apple.com/...\nGoogle Play|https://play.google.com/...')}
+          </Field>
+        </>
+      );
+    case 'Gallery':
+      return (
+        <>
+          <Field label="Gallery title">
+            <input value={values.title || ''} onChange={e => onChange('title', e.target.value)} placeholder="Seasonal menu" />
+          </Field>
+          <Field label="Intro copy">
+            {multilineTextarea(values.intro || '', e => onChange('intro', e.target.value), 'Describe your collection or welcome note.')}
+          </Field>
+          <Field label="Featured image URL">
+            <input value={values.featuredImage || ''} onChange={e => onChange('featuredImage', e.target.value)} placeholder="https://.../hero.jpg" />
+          </Field>
+          <Field label="Highlight category">
+            <input value={values.highlightCategory || ''} onChange={e => onChange('highlightCategory', e.target.value)} placeholder="Chef specials" />
+          </Field>
+          <Field label="Items (one per line: category|title|description|price|imageUrl)">
+            {multilineTextarea(values.items || '', e => onChange('items', e.target.value), 'Brunch|Avocado Toast|Sourdough, heirloom tomato, feta|$12|https://.../toast.jpg')}
+          </Field>
+          <Field label="Call-to-action label">
+            <input value={values.ctaLabel || ''} onChange={e => onChange('ctaLabel', e.target.value)} placeholder="Order online" />
+          </Field>
+          <Field label="Call-to-action link">
+            <input value={values.ctaUrl || ''} onChange={e => onChange('ctaUrl', e.target.value)} placeholder="https://example.com/order" />
           </Field>
         </>
       );

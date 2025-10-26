@@ -3,75 +3,1277 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>QR Content</title>
+  <title>QR Experience</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 20px; }
-    .card { max-width: 720px; margin: 0 auto; padding: 16px; border: 1px solid #eee; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.04); }
-    pre { white-space: pre-wrap; background:#fafafa; padding:12px; border-radius:8px; border:1px solid #eee; }
-    .actions { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
-    a.btn { display:inline-block; padding:10px 14px; border-radius:10px; text-decoration:none; border:1px solid #2a66ff; }
+    :root {
+      color-scheme: light only;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top, #e0f2ff 0%, #f8fafc 45%, #e2e8f0 100%);
+      color: #0f172a;
+      min-height: 100vh;
+    }
+    .page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(16px, 5vw, 48px);
+    }
+    .experience {
+      display: flex;
+      flex-direction: column;
+      width: min(1080px, 100%);
+      background: rgba(248, 250, 252, 0.82);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 32px 64px -32px rgba(15, 23, 42, 0.35);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      animation: fadeIn 0.5s ease;
+    }
+    .experience section {
+      padding: clamp(20px, 5vw, 36px);
+    }
+    .hero {
+      position: relative;
+      color: var(--hero-ink, #ffffff);
+      background: var(--hero-gradient, linear-gradient(135deg, #1d4ed8, #3b82f6));
+      padding: clamp(28px, 6vw, 48px);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--hero-overlay, linear-gradient(130deg, rgba(15, 23, 42, 0.45), transparent));
+      pointer-events: none;
+    }
+    .hero > * {
+      position: relative;
+      z-index: 1;
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(28px, 6vw, 40px);
+      line-height: 1.1;
+    }
+    .hero p {
+      margin: 0;
+      font-size: clamp(15px, 3vw, 18px);
+      max-width: 640px;
+      opacity: 0.88;
+    }
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.24em;
+      font-size: 12px;
+      font-weight: 600;
+      opacity: 0.8;
+    }
+    .meta-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .meta-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+      color: inherit;
+      backdrop-filter: blur(6px);
+    }
+    .meta-chip svg {
+      width: 14px;
+      height: 14px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: clamp(18px, 4vw, 24px);
+      box-shadow: 0 16px 40px -24px rgba(15, 23, 42, 0.25);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+    .card + .card {
+      margin-top: 16px;
+    }
+    .button-row {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(160px, 1fr);
+      gap: 12px;
+    }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+      text-decoration: none;
+    }
+    .button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .button-primary {
+      background: var(--accent, #2563eb);
+      color: #fff;
+      box-shadow: 0 18px 36px -24px var(--accent-shadow, rgba(37, 99, 235, 0.8));
+    }
+    .button-outline {
+      background: transparent;
+      color: var(--accent, #2563eb);
+      border: 1px solid var(--accent, #2563eb);
+    }
+    .button-soft {
+      background: rgba(15, 23, 42, 0.06);
+      color: var(--ink, #0f172a);
+    }
+    .button-icon {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: 50%;
+    }
+    .button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 40px -24px rgba(15, 23, 42, 0.35);
+    }
+    .two-column {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: clamp(20px, 4vw, 32px);
+    }
+    .audio-card {
+      position: relative;
+      border-radius: 18px;
+      padding: clamp(18px, 4vw, 28px);
+      background: linear-gradient(160deg, rgba(15, 23, 42, 0.85), rgba(30, 64, 175, 0.55));
+      color: #f8fafc;
+      overflow: hidden;
+    }
+    .audio-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at 20% -10%, rgba(59, 130, 246, 0.45), transparent 55%);
+    }
+    .audio-card > * {
+      position: relative;
+      z-index: 1;
+    }
+    .track-meta {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+    }
+    .track-cover {
+      width: clamp(68px, 8vw, 120px);
+      height: clamp(68px, 8vw, 120px);
+      border-radius: 24px;
+      overflow: hidden;
+      background: rgba(15, 23, 42, 0.8);
+      box-shadow: 0 28px 48px -32px rgba(15, 23, 42, 0.9);
+      flex-shrink: 0;
+    }
+    .track-cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    audio {
+      width: 100%;
+      margin-top: 16px;
+    }
+    .streaming-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .streaming-badges span {
+      background: rgba(15, 23, 42, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .carousel {
+      display: flex;
+      gap: 14px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .carousel::-webkit-scrollbar {
+      height: 6px;
+    }
+    .carousel::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.35);
+      border-radius: 999px;
+    }
+    .carousel-item {
+      min-width: 180px;
+      background: rgba(15, 23, 42, 0.4);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .contact-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .contact-actions a {
+      text-decoration: none;
+    }
+    .avatar {
+      width: 104px;
+      height: 104px;
+      border-radius: 32px;
+      overflow: hidden;
+      box-shadow: 0 24px 40px -28px rgba(15, 23, 42, 0.35);
+    }
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .pill {
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.14);
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(15, 23, 42, 0.72);
+    }
+    .wifi-grid {
+      display: grid;
+      gap: 14px;
+    }
+    .wifi-credentials {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .credential {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.04);
+      font-family: "JetBrains Mono", "Courier New", monospace;
+      font-size: 14px;
+    }
+    .credential strong {
+      font-weight: 600;
+      margin-right: 12px;
+    }
+    .instructions {
+      display: grid;
+      gap: 10px;
+    }
+    .instructions details {
+      background: rgba(15, 23, 42, 0.04);
+      border-radius: 12px;
+      padding: 10px 14px;
+    }
+    .instructions summary {
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .agenda {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .agenda details {
+      background: rgba(148, 163, 184, 0.12);
+      border-radius: 12px;
+      padding: 10px 14px;
+    }
+    .gallery-layout {
+      display: grid;
+      gap: 24px;
+    }
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .filter-chip {
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: #fff;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    .filter-chip.active {
+      background: var(--accent, #2563eb);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 14px 28px -20px var(--accent, rgba(37, 99, 235, 0.65));
+    }
+    .gallery-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+    .gallery-item {
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      cursor: pointer;
+      background: rgba(15, 23, 42, 0.06);
+      border: 1px solid transparent;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .gallery-item.active {
+      border-color: var(--accent, #2563eb);
+      box-shadow: 0 18px 40px -28px rgba(37, 99, 235, 0.45);
+    }
+    .gallery-item img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+    }
+    .gallery-item .gallery-info {
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .gallery-detail {
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.92);
+      padding: clamp(18px, 4vw, 28px);
+      box-shadow: 0 24px 40px -32px rgba(15, 23, 42, 0.28);
+      display: grid;
+      gap: 16px;
+    }
+    .share-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .share-row button {
+      border: none;
+      background: rgba(15, 23, 42, 0.06);
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .live-preview-frame {
+      position: relative;
+      width: 100%;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 32px 64px -32px rgba(15, 23, 42, 0.35);
+      background: rgba(15, 23, 42, 0.04);
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+    .live-preview-frame iframe {
+      width: 100%;
+      min-height: 600px;
+      border: none;
+      background: #ffffff;
+    }
+    .live-preview-frame.fallback {
+      min-height: 260px;
+      padding: 44px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #64748b;
+      background: rgba(248, 250, 252, 0.92);
+      border: 1px dashed rgba(148, 163, 184, 0.38);
+      border-radius: 16px;
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+    }
+    .preview-note {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #64748b;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .loading {
+      font-size: 16px;
+      color: #475569;
+    }
+    #toast-root {
+      position: fixed;
+      right: clamp(12px, 5vw, 28px);
+      bottom: clamp(12px, 5vw, 28px);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 4000;
+    }
+    .toast {
+      min-width: 240px;
+      max-width: min(92vw, 340px);
+      border-radius: 14px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #f8fafc;
+      box-shadow: 0 28px 48px -28px rgba(15, 23, 42, 0.55);
+      animation: slideUp 0.3s ease;
+    }
+    .toast.success { background: rgba(16, 185, 129, 0.9); }
+    .toast.error { background: rgba(239, 68, 68, 0.9); }
+    .toast.info { background: rgba(37, 99, 235, 0.9); }
+    .toast button {
+      background: transparent;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 640px) {
+      .page {
+        padding: 0;
+      }
+      .experience {
+        border-radius: 0;
+        box-shadow: none;
+        min-height: 100vh;
+      }
+      .experience section {
+        padding: 18px 18px 28px;
+      }
+      .hero {
+        padding: 22px 18px 26px;
+        gap: 14px;
+      }
+      .hero h1 {
+        font-size: clamp(24px, 7vw, 32px);
+      }
+      .hero p {
+        font-size: 15px;
+        max-width: none;
+      }
+      .meta-row {
+        gap: 8px;
+        padding: 0 18px 8px;
+        margin: 0 -18px;
+        overflow-x: auto;
+        scroll-snap-type: x proximity;
+      }
+      .meta-chip {
+        flex: 0 0 auto;
+        scroll-snap-align: center;
+        padding: 4px 12px;
+        font-size: 11px;
+        opacity: 0.92;
+      }
+      .button-row {
+        grid-auto-flow: row;
+        grid-template-columns: 1fr;
+        gap: 10px;
+        position: sticky;
+        bottom: 12px;
+        margin: 12px -18px 0;
+        padding: 12px 18px 14px;
+        background: linear-gradient(180deg, rgba(15,23,42,0) 0%, rgba(15,23,42,0.08) 100%);
+        backdrop-filter: blur(6px);
+        border-radius: 18px 18px 0 0;
+      }
+      .button {
+        width: 100%;
+        padding: 14px 16px;
+        justify-content: center;
+      }
+      .card {
+        padding: 18px;
+        border-radius: 14px;
+      }
+      .card + .card {
+        margin-top: 14px;
+      }
+      .two-column {
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+      .audio-card {
+        padding: 20px;
+        border-radius: 16px;
+      }
+      .track-meta {
+        gap: 12px;
+      }
+      .streaming-badges {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+      }
+      .streaming-badges span {
+        width: 100%;
+        justify-content: center;
+      }
+      .gallery-grid {
+        grid-template-columns: 1fr;
+      }
+      .gallery-item img {
+        height: 130px;
+      }
+      .gallery-detail {
+        padding: 18px;
+        border-radius: 14px;
+        gap: 14px;
+      }
+      .share-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+      }
+      .live-preview-frame {
+        border-radius: 14px;
+        margin-bottom: 12px;
+        box-shadow: 0 24px 44px -28px rgba(15, 23, 42, 0.28);
+      }
+      .live-preview-frame iframe {
+        min-height: 520px;
+        border-radius: 12px;
+      }
+      .preview-note {
+        font-size: 11px;
+        line-height: 1.4;
+        padding: 0 12px;
+      }
+      .button.button-outline,
+      .button.button-soft {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h2>QR Content</h2>
-    <div class="actions" id="actions"></div>
-    <pre id="payload"></pre>
+  <div class="page">
+    <div id="app" class="experience">
+      <section>
+        <div class="loading">Preparing your QR experience…</div>
+      </section>
+    </div>
   </div>
-
+  <div id="toast-root"></div>
   <script>
-    const p = new URLSearchParams(location.search);
-    const type = p.get('type') || 'TEXT';
-    const data = p.get('data') || '';
-
-    const actionsEl = document.getElementById('actions');
-    const payloadEl = document.getElementById('payload');
-    payloadEl.textContent = data;
-
-    const addBtn = (href, label) => {
-      const a = document.createElement('a');
-      a.className = 'btn'; a.target = '_blank'; a.rel = 'noreferrer';
-      a.href = href; a.textContent = label; actionsEl.appendChild(a);
+    const EMPTY_OBJECT = Object.freeze({});
+    const ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    const escapeHtml = (value) => {
+      if (value == null) return '';
+      return String(value).replace(/[&<>"']/g, (char) => ESCAPE_MAP[char] || char);
     };
-
-    function ensureHttps(u){
-      return /^https?:\/\//i.test(u) ? u : (u ? 'https://' + u : '');
-    }
-
-    switch (type) {
-      case 'URL':
-        addBtn(ensureHttps(data), 'Open link');
-        break;
-      case 'Phone':
-        addBtn(data, 'Call');
-        break;
-      case 'SMS':
-        addBtn(data, 'Send SMS');
-        break;
-      case 'Email':
-        addBtn(data.startsWith('mailto:') ? data : ('mailto:' + data), 'Send Email');
-        break;
-      case 'Vcard': {
-        const blob = new Blob([data], { type: 'text/vcard' });
-        addBtn(URL.createObjectURL(blob), 'Download contact (.vcf)');
-        break;
+    const ensureUrl = (value) => {
+      if (!value) return '';
+      const trimmed = String(value).trim();
+      if (/^https?:\/\//i.test(trimmed)) return trimmed;
+      return trimmed ? `https://${trimmed.replace(/^\/\/+/, '')}` : '';
+    };
+    const parseList = (value, delimiter = '\\n') => {
+      if (!value) return [];
+      if (Array.isArray(value)) return value.filter(Boolean);
+      return String(value).split(delimiter).map((line) => line.trim()).filter(Boolean);
+    };
+    const parseKeyedList = (value, separator = '|') => {
+      return parseList(value).map((line) => {
+        const parts = line.split(separator).map((part) => part?.trim());
+        return parts;
+      }).filter((parts) => parts.some(Boolean));
+    };
+    const formatDate = (value, options = {}) => {
+      if (!value) return '';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return new Intl.DateTimeFormat(undefined, { dateStyle: options.dateStyle || 'medium', timeStyle: options.timeStyle, hour12: false }).format(date);
+    };
+    const toICSDate = (value) => {
+      if (!value) return '';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value).replace(/[-:]/g, '');
+      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+    const buildICS = (values = EMPTY_OBJECT) => {
+      const uid = 'qr-' + Math.random().toString(36).slice(2, 10);
+      const dtstamp = toICSDate(new Date().toISOString());
+      const dtstart = toICSDate(values.start);
+      const dtend = toICSDate(values.end);
+      const lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//QRovate//Landing//EN',
+        'CALSCALE:GREGORIAN',
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        dtstamp ? `DTSTAMP:${dtstamp}` : null,
+        dtstart ? `DTSTART:${dtstart}` : null,
+        dtend ? `DTEND:${dtend}` : null,
+        values.summary ? `SUMMARY:${values.summary}` : null,
+        values.location ? `LOCATION:${values.location}` : null,
+        values.description ? `DESCRIPTION:${values.description.replace(/\\n/g, '\\\\n')}` : null,
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].filter(Boolean);
+      return lines.join('\\r\\n');
+    };
+    const buildWifiPayload = (values = EMPTY_OBJECT) => {
+      const auth = values.auth || 'WPA';
+      const hidden = values.hidden ? 'H:true;' : '';
+      return `WIFI:T:${auth};S:${values.ssid || ''};P:${values.password || ''};${hidden};`;
+    };
+    const buildVcard = (values = EMPTY_OBJECT) => {
+      const lines = [
+        'BEGIN:VCARD',
+        'VERSION:3.0',
+        `N:${values.last || ''};${values.first || ''}`,
+        `FN:${[values.first, values.last].filter(Boolean).join(' ')}`,
+        values.title ? `TITLE:${values.title}` : null,
+        values.org ? `ORG:${values.org}` : null,
+        values.email ? `EMAIL;TYPE=INTERNET:${values.email}` : null,
+        values.phone ? `TEL;TYPE=CELL:${values.phone}` : null,
+        values.url ? `URL:${values.url}` : null,
+        values.address ? `ADR:${values.address}` : null,
+        'END:VCARD'
+      ].filter(Boolean);
+      return lines.join('\\r\\n');
+    };
+    const badgeHtml = (items = [], accent = '#2563eb') => {
+      return items.map((text) => `<span class="meta-chip" style="background: ${accent}22;">${escapeHtml(text)}</span>`).join('');
+    };
+    const renderGalleryDetail = (item, accent, ctaLabel, ctaUrl) => {
+      return `
+        <div>
+          <div style="font-size:13px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.16em;">${escapeHtml(item.category)}</div>
+          <h2 style="margin:6px 0 10px; font-size:20px;">${escapeHtml(item.title)}</h2>
+          ${item.price ? '<div style="font-weight:600; color:'+accent+'; margin-bottom:12px;">'+escapeHtml(item.price)+'</div>' : ''}
+          <div style="font-size:14px; color:#475569; line-height:1.6;">${escapeHtml(item.description || 'Add a short description for this item.')}</div>
+        </div>
+        ${item.image ? '<img src="'+escapeHtml(item.image)+'" alt="'+escapeHtml(item.title)+'" style="width:100%; max-height:260px; object-fit:cover; border-radius:16px;" />' : ''}
+        ${ctaLabel && ctaUrl ? '<div class="button-row"><a class="button button-primary" href="'+escapeHtml(ensureUrl(ctaUrl))+'" target="_blank" rel="noreferrer">'+escapeHtml(ctaLabel)+'</a></div>' : ''}
+      `;
+    };
+    const shadeColor = (hex, amount) => {
+      if (!hex) return '#2563eb';
+      const col = hex.replace('#','');
+      const num = parseInt(col.length === 3 ? col.split('').map(c=>c+c).join('') : col, 16);
+      const r = Math.max(Math.min(255, (num >> 16) + amount), 0);
+      const g = Math.max(Math.min(255, (num >> 8 & 0x00FF) + amount), 0);
+      const b = Math.max(Math.min(255, (num & 0x0000FF) + amount), 0);
+      return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+    };
+    const safeHost = (url) => {
+      try { return new URL(url).hostname.replace(/^www\\./, ''); } catch { return url; }
+    };
+    const showToast = (message, tone = 'info') => {
+      if (!message) return;
+      const root = document.getElementById('toast-root');
+      if (!root) return;
+      const el = document.createElement('div');
+      el.className = 'toast ' + tone;
+      el.innerHTML = '<span>'+escapeHtml(message)+'</span><button aria-label="Dismiss toast">✕</button>';
+      const dismiss = () => {
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 180);
+      };
+      el.querySelector('button').addEventListener('click', dismiss);
+      root.appendChild(el);
+      setTimeout(dismiss, 4000);
+    };
+    const copyText = async (text) => {
+      if (!text) return false;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (err) {
+        console.warn('Clipboard write failed', err);
       }
-      case 'PDF':
-        addBtn(ensureHttps(data), 'View PDF');
-        break;
-      case 'MP3':
-        // Create audio player for MP3
-        const audio = document.createElement('audio');
-        audio.controls = true;
-        audio.style.width = '100%';
-        audio.style.marginTop = '10px';
-        audio.src = ensureHttps(data);
-        payloadEl.appendChild(audio);
-        break;
-      default:
-        // For WiFi and others, show payload for copy
-        break;
-    }
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const result = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        return result;
+      } catch (err) {
+        console.warn('execCommand copy failed', err);
+        return false;
+      }
+    };
+    const detectPlatform = () => {
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      if (/android/i.test(ua)) return 'android';
+      if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) return 'ios';
+      return 'fallback';
+    };
+    const renderers = {
+      PDF(values = EMPTY_OBJECT) {
+        const accent = values.accentColor || '#2563eb';
+        const textInk = values.textColor || '#0f172a';
+        const surface = values.backgroundColor || '#ffffff';
+        const fileUrl = ensureUrl(values.fileUrl);
+        const fileHost = fileUrl ? safeHost(fileUrl) : '';
+        const title = values.title || values.fileName || 'Document download';
+        const summary = values.description || (fileHost ? `Document hosted on ${fileHost}` : 'Share a description to help scanners.');
+        const meta = [
+          values.version ? `Version ${values.version}` : null,
+          values.fileSize || null,
+          values.updatedAt ? `Updated ${values.updatedAt}` : null,
+          fileHost || null
+        ].filter(Boolean);
+        const notes = parseList(values.notes);
+        return `
+          <div class="experience experience--pdf" style="--accent:${accent}; --ink:${textInk}; --surface:${surface};">
+            <header class="hero" style="--hero-gradient: linear-gradient(135deg, ${accent}, ${shadeColor(accent, -20)});">
+              <span class="eyebrow">PDF Download</span>
+              <h1>${escapeHtml(title)}</h1>
+              <p>${escapeHtml(summary)}</p>
+              <div class="meta-row">${badgeHtml(meta, accent)}</div>
+              <div class="button-row">
+                ${fileUrl ? `<a class="button button-primary" href="${escapeHtml(fileUrl)}" target="_blank" rel="noreferrer">Download PDF</a>` : ''}
+                ${fileUrl ? `<button class="button button-soft" data-copy="${escapeHtml(fileUrl)}">Copy link</button>` : ''}
+              </div>
+            </header>
+            <section>
+              <div class="two-column">
+                <div class="card" style="background:${surface}; color:${textInk};">
+                  <div style="display:flex; gap:16px; align-items:center;">
+                    <div style="width:72px; height:92px; border-radius:16px; overflow:hidden; background:rgba(15,23,42,0.06); display:flex; align-items:center; justify-content:center;">
+                      ${values.thumbnailUrl ? '<img src="'+escapeHtml(values.thumbnailUrl)+'" alt="Preview thumbnail" style="width:100%; height:100%; object-fit:cover;" />' : '<span style="font-size:28px; color:'+accent+';">📄</span>'}
+                    </div>
+                    <div>
+                      <div style="font-weight:600; font-size:16px;">${escapeHtml(values.fileName || 'document.pdf')}</div>
+                      <div style="font-size:13px; color:#64748b;">Ready to download</div>
+                    </div>
+                  </div>
+                  <div style="margin-top:16px; font-size:13px; line-height:1.6; color:#475569;">
+                    Keep your readers informed with version notes and a quick summary of what's inside this document.
+                  </div>
+                </div>
+                <div class="card">
+                  <strong style="display:block; font-size:13px; text-transform:uppercase; letter-spacing:0.14em; color:${accent}; margin-bottom:8px;">Version notes</strong>
+                  ${notes.length ? '<ul style="margin:0; padding-left:18px; font-size:13px; color:#475569;">'+notes.slice(0,6).map((item) => '<li>'+escapeHtml(item)+'</li>').join('')+'</ul>' : '<div style="font-size:13px; color:#94a3b8;">Add release notes to highlight key updates.</div>'}
+                </div>
+              </div>
+            </section>
+          </div>
+        `;
+      },
+      MP3(values = EMPTY_OBJECT) {
+        const accent = values.accentColor || '#38bdf8';
+        const cover = values.coverUrl || '';
+        const audioUrl = ensureUrl(values.fileUrl);
+        const title = values.title || 'Featured track';
+        const artist = values.artist || 'Artist';
+        const album = values.album || '';
+        const streaming = parseKeyedList(values.streamingLinks).map(([label, link]) => ({ label, link: ensureUrl(link) })).filter(item => item.link);
+        const more = parseKeyedList(values.moreTracks).map(([t, duration, link]) => ({ title: t, duration, link: ensureUrl(link) })).filter(item => item.title);
+        return `
+          <div class="experience experience--music" style="--accent:${accent};">
+            <header class="hero" style="--hero-gradient: linear-gradient(145deg, rgba(15,23,42,0.92), ${accent}); --hero-overlay: linear-gradient(120deg, rgba(15,23,42,0.55), transparent);">
+              <div class="eyebrow">Now playing</div>
+              <h1>${escapeHtml(title)}</h1>
+              <p>${escapeHtml(values.description || 'Give listeners a hero message explaining the story behind this track or release.')}</p>
+              <div class="meta-row">
+                <span class="meta-chip">${escapeHtml(artist)}</span>
+                ${album ? '<span class="meta-chip">'+escapeHtml(album)+'</span>' : ''}
+              </div>
+            </header>
+            <section>
+              <div class="audio-card">
+                <div class="track-meta">
+                  <div class="track-cover">${cover ? '<img src="'+escapeHtml(cover)+'" alt="Cover art" />' : ''}</div>
+                  <div>
+                    <div style="font-size:15px; font-weight:600;">${escapeHtml(title)}</div>
+                    <div style="font-size:13px; opacity:0.8;">${escapeHtml(artist)}${album ? ' • ' + escapeHtml(album) : ''}</div>
+                    ${streaming.length ? '<div class="streaming-badges">'+streaming.slice(0,3).map(item => '<a class="button button-outline" style="padding:6px 12px;" href="'+escapeHtml(item.link)+'" target="_blank" rel="noreferrer">'+escapeHtml(item.label)+'</a>').join('')+'</div>' : ''}
+                  </div>
+                </div>
+                ${audioUrl ? '<audio controls src="'+escapeHtml(audioUrl)+'"></audio>' : '<div style="font-size:13px; opacity:0.85;">Upload an MP3 to enable inline playback.</div>'}
+                ${more.length ? '<div><div style="font-size:12px; text-transform:uppercase; letter-spacing:0.18em; color:rgba(226,232,240,0.8); margin-bottom:8px;">More from the artist</div><div class="carousel">'+more.slice(0,5).map(item => '<div class="carousel-item"><div style="font-weight:600; font-size:13px;">'+escapeHtml(item.title)+'</div>'+(item.duration?'<div style="font-size:12px; opacity:0.7;">'+escapeHtml(item.duration)+'</div>':'')+(item.link?'<a href="'+escapeHtml(item.link)+'" target="_blank" rel="noreferrer" style="display:inline-flex; align-items:center; gap:6px; margin-top:10px; font-size:12px; color:#bae6fd;">Listen</a>':'')+'</div>').join('')+'</div></div>' : ''}
+              </div>
+            </section>
+          </div>
+        `;
+      },
+      VCARD(values = EMPTY_OBJECT) {
+        const accent = values.accentColor || '#8b5cf6';
+        const name = [values.first, values.last].filter(Boolean).join(' ') || 'Alex Morgan';
+        const pronouns = values.pronouns || '';
+        const title = values.title || values.org || '';
+        const bio = values.bio || 'Add a short personal introduction or mission statement.';
+        const contacts = [
+          values.phone ? { label: 'Call', href: 'tel:' + values.phone } : null,
+          values.email ? { label: 'Email', href: 'mailto:' + values.email } : null,
+          { label: 'Save contact', href: '#', download: 'contact.vcf', action: 'download-vcard' }
+        ].filter(Boolean);
+        const socials = [
+          { label: 'LinkedIn', href: ensureUrl(values.linkedin) },
+          { label: 'Instagram', href: ensureUrl(values.instagram) },
+          { label: 'Twitter', href: ensureUrl(values.twitter) },
+          { label: 'Facebook', href: ensureUrl(values.facebook) },
+          { label: 'Website', href: ensureUrl(values.url) }
+        ].filter(item => item.href);
+        return `
+          <div class="experience experience--vcard" style="--accent:${accent};">
+            <header class="hero" style="--hero-gradient: linear-gradient(130deg, ${accent}, ${shadeColor(accent, -20)});">
+              <div class="eyebrow">Digital business card</div>
+              <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+                <div class="avatar">${values.avatarUrl ? '<img src="'+escapeHtml(values.avatarUrl)+'" alt="'+escapeHtml(name)+'" />' : ''}</div>
+                <div>
+                  <h1 style="margin-bottom:6px;">${escapeHtml(name)}</h1>
+                  <p style="margin:0;">${escapeHtml(title)}</p>
+                  ${pronouns ? '<span class="pill" style="margin-top:10px; display:inline-block;">'+escapeHtml(pronouns)+'</span>' : ''}
+                </div>
+              </div>
+            </header>
+            <section>
+              <div class="card">
+                <div style="font-size:14px; line-height:1.6; color:#475569; margin-bottom:16px;">${escapeHtml(bio)}</div>
+                <div class="contact-actions">
+                  ${contacts.map((item) => {
+                    if (item.action === 'download-vcard') {
+                      return '<button class="button button-primary" data-action="download-vcard">Save contact</button>';
+                    }
+                    return '<a class="button button-outline" href="'+escapeHtml(item.href)+'">'+escapeHtml(item.label)+'</a>';
+                  }).join('')}
+                </div>
+              </div>
+              ${socials.length ? '<div class="card" style="margin-top:18px;"><strong style="font-size:13px; text-transform:uppercase; letter-spacing:0.14em; color:'+accent+';">Connect</strong><div class="button-row" style="margin-top:12px;">'+socials.map((item) => '<a class="button button-soft" href="'+escapeHtml(item.href)+'" target="_blank" rel="noreferrer">'+escapeHtml(item.label)+'</a>').join('')+'</div></div>' : ''}
+            </section>
+          </div>
+        `;
+      },
+      APPLINK(values = EMPTY_OBJECT) {
+        const accent = values.accentColor || '#2563eb';
+        const headline = values.headline || 'Install our app';
+        const subheadline = values.subheadline || 'Send scanners to the right app store with one smart link.';
+        const features = parseList(values.features);
+        const badges = parseKeyedList(values.storeBadges).map(([label, link]) => ({ label, link: ensureUrl(link) })).filter(item => item.link);
+        return `
+          <div class="experience experience--applink" style="--accent:${accent};">
+            <header class="hero" style="--hero-gradient: linear-gradient(130deg, ${accent}, ${shadeColor(accent, -20)}); background-image: ${values.backgroundImage ? 'url('+escapeHtml(values.backgroundImage)+')' : 'none'}; background-size: cover; background-position: center;">
+              <span class="eyebrow">Smart app link</span>
+              <h1>${escapeHtml(headline)}</h1>
+              <p>${escapeHtml(subheadline)}</p>
+              <div class="button-row" style="flex-wrap:wrap;">
+                <a class="button button-primary" data-store="ios">App Store</a>
+                <a class="button button-primary" data-store="android">Google Play</a>
+                <a class="button button-outline" data-store="fallback">Open web app</a>
+              </div>
+            </header>
+            <section>
+              <div class="two-column">
+                <div class="card">
+                  <strong style="display:block; font-size:13px; text-transform:uppercase; letter-spacing:0.14em; color:${accent}; margin-bottom:6px;">Highlights</strong>
+                  ${features.length ? '<ul style="margin:0; padding-left:18px; font-size:13px; color:#475569; line-height:1.6;">'+features.slice(0,6).map(item => '<li>'+escapeHtml(item)+'</li>').join('')+'</ul>' : '<div style="font-size:13px; color:#94a3b8;">Add bullet points to describe why people should install.</div>'}
+                </div>
+                <div class="card">
+                  <strong style="display:block; font-size:13px; text-transform:uppercase; letter-spacing:0.14em; color:${accent}; margin-bottom:8px;">Available on</strong>
+                  <div class="button-row">
+                    ${badges.length ? badges.slice(0,4).map(item => '<a class="button button-soft" href="'+escapeHtml(item.link)+'" target="_blank" rel="noreferrer">'+escapeHtml(item.label)+'</a>').join('') : '<div style="font-size:13px; color:#94a3b8;">Provide badge links or leave empty to auto-detect.</div>'}
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        `;
+      },
+      WIFI(values = EMPTY_OBJECT) {
+        const accent = '#0ea5e9';
+        return `
+          <div class="experience experience--wifi" style="--accent:${accent};">
+            <header class="hero" style="--hero-gradient: linear-gradient(140deg, ${accent}, ${shadeColor(accent, -20)});">
+              <span class="eyebrow">Guest Wi‑Fi</span>
+              <h1>${escapeHtml(values.ssid || 'Guest network')}</h1>
+              <p>${escapeHtml(values.venue || 'Connect instantly without typing the password by using the buttons below.')}</p>
+            </header>
+            <section>
+              <div class="wifi-grid">
+                <div class="card wifi-credentials">
+                  <div class="credential">
+                    <div><strong>Network</strong> ${escapeHtml(values.ssid || '')}</div>
+                    <button class="button button-soft button-icon" data-copy="${escapeHtml(values.ssid || '')}" title="Copy network name">📋</button>
+                  </div>
+                  <div class="credential">
+                    <div><strong>Password</strong> ${escapeHtml(values.password || 'No password')}</div>
+                    <button class="button button-soft button-icon" data-copy="${escapeHtml(values.password || '')}" title="Copy password">🔑</button>
+                  </div>
+                  <div style="font-size:12px; color:#64748b;">Security: ${escapeHtml(values.auth || 'WPA')}</div>
+                  ${values.notes ? '<div style="font-size:12px; color:#475569;">'+escapeHtml(values.notes)+'</div>' : ''}
+                  <div class="button-row">
+                    <button class="button button-outline" data-download-wifi>Download config</button>
+                  </div>
+                </div>
+                <div class="card">
+                  <strong style="display:block; font-size:13px; text-transform:uppercase; letter-spacing:0.14em; color:${accent}; margin-bottom:8px;">How to connect</strong>
+                  <div class="instructions">
+                    <details open>
+                      <summary>iOS & iPadOS</summary>
+                      <ol>
+                        <li>Open Settings → Wi‑Fi.</li>
+                        <li>Select <strong>${escapeHtml(values.ssid || 'Network')}</strong>.</li>
+                        <li>Enter the password and tap Join.</li>
+                      </ol>
+                    </details>
+                    <details>
+                      <summary>Android</summary>
+                      <ol>
+                        <li>Open Settings → Network & Internet → Internet.</li>
+                        <li>Tap <strong>${escapeHtml(values.ssid || 'Network')}</strong>.</li>
+                        <li>Enter the password and tap Connect.</li>
+                      </ol>
+                    </details>
+                    <details>
+                      <summary>macOS & Windows</summary>
+                      <ol>
+                        <li>Open Wi‑Fi settings from menu bar or taskbar.</li>
+                        <li>Select <strong>${escapeHtml(values.ssid || 'Network')}</strong>.</li>
+                        <li>Enter the password to connect.</li>
+                      </ol>
+                    </details>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        `;
+      },
+      EVENT(values = EMPTY_OBJECT) {
+        const accent = '#f97316';
+        const agenda = parseList(values.agenda);
+        const mapUrl = ensureUrl(values.mapUrl);
+        const locationQuery = values.location ? 'https://www.google.com/maps/search/' + encodeURIComponent(values.location) : '';
+        return `
+          <div class="experience experience--event" style="--accent:${accent};">
+            <header class="hero" style="--hero-gradient: linear-gradient(140deg, ${accent}, ${shadeColor(accent, -20)}); background-image:${values.heroImage ? 'url(' + escapeHtml(values.heroImage) + ')' : 'none'}; background-size:cover; background-position:center;">
+              <span class="eyebrow">Event invitation</span>
+              <h1>${escapeHtml(values.summary || 'Upcoming event')}</h1>
+              <p>${escapeHtml(values.description || 'Share key details, agenda highlights, and give attendees a clear next step.')}</p>
+              <div class="meta-row">
+                ${values.start ? '<span class="meta-chip">Starts '+escapeHtml(formatDate(values.start, { dateStyle: 'long', timeStyle: 'short' }))+'</span>' : ''}
+                ${values.end ? '<span class="meta-chip">Ends '+escapeHtml(formatDate(values.end, { dateStyle: 'long', timeStyle: 'short' }))+'</span>' : ''}
+                ${values.timezone ? '<span class="meta-chip">'+escapeHtml(values.timezone)+'</span>' : ''}
+              </div>
+              <div class="button-row">
+                <button class="button button-primary" data-download-ics>Add to calendar</button>
+                ${values.ctaLabel && values.ctaUrl ? '<a class="button button-outline" href="'+escapeHtml(ensureUrl(values.ctaUrl))+'" target="_blank" rel="noreferrer">'+escapeHtml(values.ctaLabel)+'</a>' : ''}
+              </div>
+            </header>
+            <section>
+              <div class="two-column">
+                <div class="card">
+                  <strong style="display:block; font-size:13px; text-transform:uppercase; letter-spacing:0.14em; color:${accent}; margin-bottom:8px;">Venue</strong>
+                  <div style="font-size:14px; color:#475569; line-height:1.6;">${escapeHtml(values.location || 'Add venue or meeting link.')}</div>
+                  ${values.dressCode ? '<div style="font-size:13px; margin-top:12px; color:#94a3b8;">Dress code: '+escapeHtml(values.dressCode)+'</div>' : ''}
+                  ${mapUrl || locationQuery ? '<div class="button-row" style="margin-top:16px;"><a class="button button-soft" href="'+escapeHtml(mapUrl || locationQuery)+'" target="_blank" rel="noreferrer">Open in maps</a></div>' : ''}
+                </div>
+                <div class="card">
+                  <strong style="display:block; font-size:13px; text-transform:uppercase; letter-spacing:0.14em; color:${accent}; margin-bottom:8px;">Agenda</strong>
+                  ${agenda.length ? '<div class="agenda">'+agenda.slice(0,8).map(item => {
+                    const [time, ...rest] = item.split(' - ');
+                    const detail = rest.join(' - ');
+                    return '<details><summary>'+escapeHtml(time || item)+'</summary><div style="font-size:13px; color:#475569; margin-top:8px;">'+escapeHtml(detail || 'Details coming soon')+'</div></details>';
+                  }).join('')+'</div>' : '<div style="font-size:13px; color:#94a3b8;">Add agenda lines (e.g. “10:00 - Welcome coffee”).</div>'}
+                </div>
+              </div>
+            </section>
+          </div>
+        `;
+      },
+      GALLERY(values = EMPTY_OBJECT) {
+        const accent = '#ec4899';
+        const parsedItems = parseKeyedList(values.items).map(([category, title, description, price, image]) => ({
+          category: category || 'Featured',
+          title: title || 'Item',
+          description: description || '',
+          price: price || '',
+          image: image || ''
+        }));
+        const categories = Array.from(new Set(parsedItems.map(item => item.category))).sort();
+        const highlight = parsedItems[0] || null;
+        return `
+          <div class="experience experience--gallery" style="--accent:${accent};">
+            <header class="hero" style="--hero-gradient: linear-gradient(140deg, ${accent}, ${shadeColor(accent, -20)});">
+              <span class="eyebrow">Gallery showcase</span>
+              <h1>${escapeHtml(values.title || 'Gallery or menu')}</h1>
+              <p>${escapeHtml(values.intro || 'Filter by category, tap an item, and prompt visitors with a call-to-action to explore further or place an order.')}</p>
+              <div class="filter-row">
+                <button class="filter-chip active" data-filter="all">All</button>
+                ${categories.map((cat) => '<button class="filter-chip" data-filter="'+escapeHtml(cat)+'">'+escapeHtml(cat)+'</button>').join('')}
+              </div>
+            </header>
+            <section>
+              <div class="gallery-layout">
+                <div class="gallery-grid">
+                  ${parsedItems.length ? parsedItems.map((item, idx) => '<div class="gallery-item'+(idx===0?' active':'')+'" data-category="'+escapeHtml(item.category)+'" data-index="'+idx+'">'+(item.image?'<img src="'+escapeHtml(item.image)+'" alt="'+escapeHtml(item.title)+'" />':'')+'<div class="gallery-info"><div style="font-weight:600;">'+escapeHtml(item.title)+'</div>'+(item.price?'<div style="color:'+accent+'; font-weight:600;">'+escapeHtml(item.price)+'</div>':'')+'</div></div>').join('') : '<div style="font-size:13px; color:#94a3b8;">Add gallery items using the format category|title|description|price|imageUrl</div>'}
+                </div>
+                <div class="gallery-detail" data-gallery-detail>
+                  ${highlight ? renderGalleryDetail(highlight, accent, values.ctaLabel, values.ctaUrl) : '<div style="font-size:13px; color:#94a3b8;">Select an item to see details here.</div>'}
+                </div>
+              </div>
+            </section>
+          </div>
+        `;
+      },
+      TEXT(values = EMPTY_OBJECT) {
+        const accent = values.accentColor || '#6366f1';
+        const backgroundImage = values.backgroundImage ? 'url(' + escapeHtml(values.backgroundImage) + ')' : 'none';
+        const highlight = values.highlightText || '';
+        const bullets = parseList(values.bulletPoints);
+        return `
+          <div class="experience experience--text" style="--accent:${accent};">
+            <header class="hero" style="--hero-gradient: linear-gradient(135deg, ${accent}, ${shadeColor(accent, -20)}); background-image:${backgroundImage}; background-size:cover; background-position:center;">
+              <span class="eyebrow">Landing spotlight</span>
+              <h1>${escapeHtml(values.headline || 'Tell your story')}</h1>
+              <p>${escapeHtml(values.subheadline || 'Use this branded hero block to welcome scanners and guide them to the next action.')}</p>
+              ${highlight ? '<div class="pill" style="background:rgba(255,255,255,0.2);">'+escapeHtml(highlight)+'</div>' : ''}
+              <div class="button-row">
+                ${values.ctaLabel && values.ctaUrl ? '<a class="button button-primary" href="'+escapeHtml(ensureUrl(values.ctaUrl))+'" target="_blank" rel="noreferrer">'+escapeHtml(values.ctaLabel)+'</a>' : ''}
+                ${values.secondaryCtaLabel && values.secondaryCtaUrl ? '<a class="button button-outline" href="'+escapeHtml(ensureUrl(values.secondaryCtaUrl))+'" target="_blank" rel="noreferrer">'+escapeHtml(values.secondaryCtaLabel)+'</a>' : ''}
+              </div>
+            </header>
+            <section>
+              <div class="two-column">
+                <div class="card">
+                  <div style="font-size:14px; line-height:1.65; color:#475569;">${escapeHtml(values.text || 'This is your flexible copy block. Share offers, announcements, or detailed explanations with scanners.')}</div>
+                  ${bullets.length ? '<ul style="margin-top:16px; padding-left:18px; font-size:13px; color:#64748b;">'+bullets.map(item => '<li>'+escapeHtml(item)+'</li>').join('')+'</ul>' : ''}
+                </div>
+                <div class="card">
+                  <strong style="display:block; font-size:13px; text-transform:uppercase; letter-spacing:0.14em; color:${accent}; margin-bottom:10px;">Share</strong>
+                  <div class="share-row">
+                    <button data-action="share">Share link</button>
+                    <button data-copy="${escapeHtml(location.href)}">Copy page URL</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        `;
+      },
+      DEFAULT(values, state) {
+        return `
+          <div class="experience">
+            <header class="hero">
+              <span class="eyebrow">QR content</span>
+              <h1>Template coming soon</h1>
+              <p>We don't have a tailored landing yet for template type "${escapeHtml(state.type)}". Here's the raw payload for now.</p>
+            </header>
+            <section>
+              <div class="card">
+                <pre style="white-space:pre-wrap; font-family: 'JetBrains Mono', monospace; font-size:13px; color:#334155; margin:0;">${escapeHtml(state.raw || JSON.stringify(values, null, 2))}</pre>
+              </div>
+            </section>
+          </div>
+        `;
+      }
+    };
+    const enhance = (type, values) => {
+      document.querySelectorAll('[data-copy]').forEach((el) => {
+        el.addEventListener('click', async () => {
+          const ok = await copyText(el.getAttribute('data-copy'));
+          showToast(ok ? 'Copied to clipboard' : 'Unable to copy. Try manually.', ok ? 'success' : 'error');
+        });
+      });
+      const shareButton = document.querySelector('[data-action="share"]');
+      if (shareButton) {
+        shareButton.addEventListener('click', async () => {
+          const shareData = {
+            title: values.headline || document.title,
+            text: values.subheadline || 'Check this out',
+            url: location.href
+          };
+          if (navigator.share) {
+            try {
+              await navigator.share(shareData);
+              showToast('Shared successfully', 'success');
+              return;
+            } catch (err) {
+              console.warn('Share failed', err);
+            }
+          }
+          const ok = await copyText(location.href);
+          showToast(ok ? 'Link copied (share manually)' : 'Unable to copy share link', ok ? 'success' : 'error');
+        });
+      }
+      const vcardButton = document.querySelector('[data-action="download-vcard"]');
+      if (vcardButton) {
+        vcardButton.addEventListener('click', () => {
+          const blob = new Blob([buildVcard(values)], { type: 'text/vcard' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = (values.first || 'contact') + '-qr.vcf';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          showToast('Contact card downloaded', 'success');
+        });
+      }
+      const icsButton = document.querySelector('[data-download-ics]');
+      if (icsButton) {
+        icsButton.addEventListener('click', () => {
+          const ics = buildICS(values);
+          const blob = new Blob([ics], { type: 'text/calendar' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = (values.summary || 'event') + '.ics';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          showToast('Calendar event downloaded', 'success');
+        });
+      }
+      const wifiButton = document.querySelector('[data-download-wifi]');
+      if (wifiButton) {
+        wifiButton.addEventListener('click', () => {
+          const payload = buildWifiPayload(values);
+          const blob = new Blob([payload], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = (values.ssid || 'wifi') + '.txt';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          showToast('Wi‑Fi config downloaded', 'success');
+        });
+      }
+      if (type === 'APPLINK') {
+        const platform = detectPlatform();
+        document.querySelectorAll('[data-store]').forEach((button) => {
+          const target = button.getAttribute('data-store');
+          let href = '';
+          switch (target) {
+            case 'ios': href = ensureUrl(values.iosUrl); break;
+            case 'android': href = ensureUrl(values.androidUrl); break;
+            case 'fallback': href = ensureUrl(values.fallbackUrl); break;
+          }
+          if (!href) {
+            button.disabled = true;
+          } else {
+            button.setAttribute('href', href);
+            button.setAttribute('target', '_blank');
+            button.setAttribute('rel', 'noreferrer');
+          }
+          if (target === platform) {
+            button.classList.add('button-primary');
+          }
+        });
+      }
+      if (type === 'GALLERY') {
+        const detail = document.querySelector('[data-gallery-detail]');
+        const items = Array.from(document.querySelectorAll('.gallery-item'));
+        const parsed = parseKeyedList(values.items).map(([category, title, description, price, image]) => ({
+          category: category || 'Featured',
+          title: title || 'Item',
+          description: description || '',
+          price: price || '',
+          image: image || ''
+        }));
+        const renderDetail = (index) => {
+          const item = items[index];
+          if (!item) return;
+          items.forEach((el) => el.classList.toggle('active', el === item));
+          const data = parsed[index];
+          if (!data || !detail) return;
+          detail.innerHTML = renderGalleryDetail(data, getComputedStyle(detail).getPropertyValue('--accent') || '#ec4899', values.ctaLabel, values.ctaUrl);
+        };
+        items.forEach((item, idx) => {
+          item.addEventListener('click', () => renderDetail(idx));
+        });
+        document.querySelectorAll('[data-filter]').forEach((chip) => {
+          chip.addEventListener('click', () => {
+            const filter = chip.getAttribute('data-filter');
+            document.querySelectorAll('.filter-chip').forEach((c) => c.classList.toggle('active', c === chip));
+            items.forEach((item) => {
+              const match = filter === 'all' || item.getAttribute('data-category') === filter;
+              item.style.display = match ? '' : 'none';
+            });
+            const firstVisible = items.findIndex((item) => item.style.display !== 'none');
+            if (firstVisible >= 0) {
+              renderDetail(firstVisible);
+            }
+          });
+        });
+      }
+    };
+    (function init() {
+      const params = new URLSearchParams(window.location.search);
+      const rawType = params.get('type') || 'TEXT';
+      const type = rawType.toUpperCase();
+      let rawData = params.get('data') || '';
+      try { rawData = decodeURIComponent(rawData); } catch { /* ignore */ }
+      let values;
+      try {
+        values = rawData ? JSON.parse(rawData) : {};
+      } catch {
+        values = { legacy: rawData };
+      }
+      if (values == null || typeof values !== 'object') values = { legacy: String(values || '') };
+      const renderer = renderers[type] || renderers.DEFAULT;
+      const markup = renderer(values, { type, raw: rawData });
+      const container = document.querySelector('#app');
+      if (container) {
+        container.outerHTML = markup;
+      }
+      enhance(type, values);
+    })();
   </script>
 </body>
 </html>

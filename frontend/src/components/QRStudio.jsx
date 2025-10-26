@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import QRious from 'qrious';
 import { api, API } from '../api';
+import { useClipboard } from '../lib/useClipboard.js';
 
 /* ---------- Config ---------- */
 
 const TEMPLATES = [
-  'URL','TEXT','Phone','SMS','Email','Whatsapp','Facetime','Location','WiFi','Event','Vcard',
-  'Crypto','PayPal','UPI Payment','EPC Payment','PIX Payment'
+  'URL', 'TEXT', 'Phone', 'SMS', 'Email', 'Whatsapp', 'Facetime', 'Location', 'WiFi', 'Event', 'Vcard',
+  'PDF', 'MP3', 'AppLink', 'Gallery',
+  'Crypto', 'PayPal', 'UPI Payment', 'EPC Payment', 'PIX Payment'
 ];
 
 const MODE = { STATIC: 'static', DYNAMIC: 'dynamic' };
@@ -16,11 +18,14 @@ const normalizeUrl = (u) => /^https?:\/\//i.test(u || '') ? u : (u ? `https://${
 const FRONTEND_ORIGIN = (typeof window !== 'undefined' ? window.location.origin : '');
 const makeDynamicTarget = (type, values) => {
   if (type === 'URL') return normalizeUrl(values.url || '');
-  const payload = buildPayload(type, values);
   // landing page that renders payload for non-URL
   const url = new URL((FRONTEND_ORIGIN || '') + '/payload.html');
   url.searchParams.set('type', type);
-  url.searchParams.set('data', payload);
+  try {
+    url.searchParams.set('data', JSON.stringify(values || {}));
+  } catch {
+    url.searchParams.set('data', '');
+  }
   return url.toString();
 };
 
@@ -59,6 +64,10 @@ function buildPayload(type, v){
     case 'Vcard': {
       return `BEGIN:VCARD\nVERSION:3.0\nN:${v.last||''};${v.first||''}\nEMAIL:${v.email||''}\nTEL:${v.phone||''}\nORG:${v.org||''}\nTITLE:${v.title||''}\nADR:${v.address||''}\nURL:${v.url||''}\nEND:VCARD`;
     }
+    case 'PDF': return normalizeUrl(v.fileUrl || '');
+    case 'MP3': return normalizeUrl(v.fileUrl || '');
+    case 'AppLink': return normalizeUrl(v.fallbackUrl || v.iosUrl || v.androidUrl || v.windowsUrl || v.macUrl || '');
+    case 'Gallery': return normalizeUrl(v.ctaUrl || '');
     case 'Crypto': {
       const scheme = (v.symbol||'BTC').toLowerCase();
       const addr = v.address||'';
@@ -146,6 +155,7 @@ export default function QRStudio({ user }) {
   const [guestModal, setGuestModal] = useState(null); // { url, token, id }
 
   const { errors } = useValidation(tpl, values);
+  const { copy: copyToClipboard } = useClipboard();
 
   // Build static payload + render
   useEffect(()=>{
@@ -461,7 +471,18 @@ export default function QRStudio({ user }) {
                   <input readOnly value={guestModal.url} style={{width:'100%'}} />
                 </div>
                 <div style={{display:'flex', gap:8}}>
-                  <button onClick={()=>{ navigator.clipboard?.writeText(guestModal.url); setMsg('Link copied to clipboard'); }}>Copy link</button>
+                  <button
+                    onClick={async () => {
+                      const ok = await copyToClipboard(guestModal.url, {
+                        successMessage: 'Link copied to clipboard',
+                        errorMessage: 'Could not copy link'
+                      });
+                      if (ok) setMsg('Link copied to clipboard');
+                    }}
+                    aria-label="Copy guest QR link to clipboard"
+                  >
+                    Copy link
+                  </button>
                   <button onClick={()=>{ window.location.href = `mailto:?subject=Try my QR&body=Open this link: ${guestModal.url}`; }}>Email link</button>
                   <button onClick={()=>{ setGuestModal(null); }}>Close</button>
                 </div>
@@ -563,6 +584,33 @@ function TemplateFields({ type, values, errors, onChange }){
         <Field label="Title"><input value={values.title||''} onChange={e=>onChange('title',e.target.value)} /></Field>
         <Field label="Address"><input value={values.address||''} onChange={e=>onChange('address',e.target.value)} /></Field>
         <Field label="URL"><input value={values.url||''} onChange={e=>onChange('url',e.target.value)} /></Field>
+      </>;
+    case 'PDF':
+      return <>
+        <Field label="File URL"><input value={values.fileUrl||''} onChange={e=>onChange('fileUrl',e.target.value)} placeholder="https://example.com/doc.pdf" /></Field>
+        <Field label="Title"><input value={values.title||''} onChange={e=>onChange('title',e.target.value)} placeholder="Document title" /></Field>
+        <Field label="Description"><textarea value={values.description||''} onChange={e=>onChange('description',e.target.value)} /></Field>
+      </>;
+    case 'MP3':
+      return <>
+        <Field label="Audio URL"><input value={values.fileUrl||''} onChange={e=>onChange('fileUrl',e.target.value)} placeholder="https://example.com/audio.mp3" /></Field>
+        <Field label="Track title"><input value={values.title||''} onChange={e=>onChange('title',e.target.value)} /></Field>
+        <Field label="Artist"><input value={values.artist||''} onChange={e=>onChange('artist',e.target.value)} /></Field>
+      </>;
+    case 'AppLink':
+      return <>
+        <Field label="Headline"><input value={values.headline||''} onChange={e=>onChange('headline',e.target.value)} /></Field>
+        <Field label="iOS URL"><input value={values.iosUrl||''} onChange={e=>onChange('iosUrl',e.target.value)} placeholder="https://apps.apple.com/..." /></Field>
+        <Field label="Android URL"><input value={values.androidUrl||''} onChange={e=>onChange('androidUrl',e.target.value)} placeholder="https://play.google.com/..." /></Field>
+        <Field label="Fallback URL"><input value={values.fallbackUrl||''} onChange={e=>onChange('fallbackUrl',e.target.value)} placeholder="https://example.com" /></Field>
+      </>;
+    case 'Gallery':
+      return <>
+        <Field label="Title"><input value={values.title||''} onChange={e=>onChange('title',e.target.value)} placeholder="Menu or collection name" /></Field>
+        <Field label="Items (category|title|description|price|image)">
+          <textarea value={values.items||''} onChange={e=>onChange('items',e.target.value)} placeholder="Brunch|Avocado Toast|Sourdough & feta|$12|https://..." />
+        </Field>
+        <Field label="CTA URL"><input value={values.ctaUrl||''} onChange={e=>onChange('ctaUrl',e.target.value)} placeholder="https://example.com/order" /></Field>
       </>;
 
     case 'Crypto':

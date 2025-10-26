@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Icon from './ui/Icon.jsx';
 
-export default function QRDownload({ qrId, qrName }) {
+export default function QRDownload({ qrId, qrName, iconSize = 18 }) {
   const [downloading, setDownloading] = useState(false);
 
   const handleDownload = async (format) => {
@@ -45,11 +45,10 @@ export default function QRDownload({ qrId, qrName }) {
       aria-label="Download PNG"
     >
       {downloading ? (
-        <Icon name="loader" className="icon-spin" size={18} />
+        <Icon name="loader" className="icon-spin" size={iconSize} />
       ) : (
-        <Icon name="download" size={18} />
+        <Icon name="download" size={iconSize} />
       )}
     </button>
   );
 }
-

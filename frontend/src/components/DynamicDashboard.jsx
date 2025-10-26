@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, API } from '../api';
 import { renderStyledQR } from '../lib/styledQr';
 import { addToQueue } from '../lib/syncQueue';
-import TemplatePreview, { EditableTemplatePreview, LivePreview } from './TemplatePreview.jsx';
+import TemplatePreview, { EditableTemplatePreview } from './TemplatePreview.jsx';
 import {
   TEMPLATES,
   TEMPLATE_DEFAULTS,
@@ -170,6 +170,87 @@ function destinationSummary(type, values) {
   }
 }
 
+const REQUIRED_HINTS = {
+  URL: 'Add a valid link such as https://example.com',
+  TEXT: 'Write the message scanners should read.',
+  PHONE: 'Include the phone number to dial.',
+  SMS: 'Provide the phone number that will receive the text message.',
+  EMAIL: 'Set the recipient email address.',
+  WHATSAPP: 'Add the WhatsApp phone number.',
+  FACETIME: 'Provide the FaceTime phone number or email address.',
+  LOCATION: 'Enter coordinates or a map search query.',
+  WIFI: 'Add the Wi‑Fi network name and password.',
+  EVENT: 'Include at least a title and start date for your event.',
+  VCARD: 'Add contact details such as name, email, or phone.',
+  PDF: 'Upload a PDF file to link to.',
+  MP3: 'Upload an audio file to link to.',
+  VOUCHER: 'Enter the voucher or coupon code.',
+  CRYPTO: 'Add the crypto wallet address.',
+  PAYPAL: 'Enter your PayPal username.',
+  'UPI PAYMENT': 'Provide your UPI handle (VPA).',
+  'EPC PAYMENT': 'Enter the account name and IBAN.',
+  'PIX PAYMENT': 'Paste the PIX payload string.'
+};
+
+const hasValue = (value) => {
+  if (value === null || value === undefined) return false;
+  if (Array.isArray(value)) return value.length > 0;
+  return String(value).trim().length > 0;
+};
+
+function isDestinationComplete(template, values = {}) {
+  const type = (template || 'URL').toUpperCase();
+  switch (type) {
+    case 'URL':
+      return hasValue(values.url);
+    case 'TEXT':
+      return hasValue(values.text);
+    case 'PHONE':
+      return hasValue(values.phone);
+    case 'SMS':
+      return hasValue(values.to);
+    case 'EMAIL':
+      return hasValue(values.to);
+    case 'WHATSAPP':
+      return hasValue(values.phone);
+    case 'FACETIME':
+      return hasValue(values.target);
+    case 'LOCATION':
+      return (hasValue(values.lat) && hasValue(values.lng)) || hasValue(values.query);
+    case 'WIFI': {
+      if (!hasValue(values.ssid)) return false;
+      const auth = (values.auth || 'WPA').toUpperCase();
+      return auth === 'NOPASS' || hasValue(values.password);
+    }
+    case 'EVENT':
+      return hasValue(values.summary) && hasValue(values.start);
+    case 'VCARD':
+      return hasValue(values.first) || hasValue(values.last) || hasValue(values.email) || hasValue(values.phone);
+    case 'PDF':
+    case 'MP3':
+      return hasValue(values.fileUrl);
+    case 'VOUCHER':
+      return hasValue(values.code);
+    case 'CRYPTO':
+      return hasValue(values.address);
+    case 'PAYPAL':
+      return hasValue(values.username);
+    case 'UPI PAYMENT':
+      return hasValue(values.vpa);
+    case 'EPC PAYMENT':
+      return hasValue(values.iban) && hasValue(values.name);
+    case 'PIX PAYMENT':
+      return hasValue(values.payload);
+    default:
+      return true;
+  }
+}
+
+function destinationValidationMessage(template) {
+  const type = (template || 'URL').toUpperCase();
+  return REQUIRED_HINTS[type] || 'Complete the required fields above to continue.';
+}
+
 const renderStylePayload = (style, allowLogo) => {
   const safe = {
     size: Math.round(style.size),
@@ -214,6 +295,26 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
   const [mobilePreviewData, setMobilePreviewData] = useState(null);
   const [previewInfo, setPreviewInfo] = useState({ width: 0, height: 0 });
   const [previewMode, setPreviewMode] = useState('qr');
+  const [mobileRailOpen, setMobileRailOpen] = useState(false);
+  const previewData = useMemo(() => {
+    try {
+      return JSON.stringify(values ?? {});
+    } catch {
+      return '';
+    }
+  }, [values]);
+  const previewUrl = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    if (!tpl) return '';
+    if (!previewData) return '';
+    try {
+      const typeParam = encodeURIComponent(String(tpl).toUpperCase());
+      const dataParam = encodeURIComponent(previewData);
+      return `${window.location.origin}/payload.html?type=${typeParam}&data=${dataParam}`;
+    } catch {
+      return '';
+    }
+  }, [tpl, previewData]);
   const draftsRef = useRef({});
   const prevSelRef = useRef(null);
   const [lastCreatedId, setLastCreatedId] = useState(null);
@@ -234,6 +335,14 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
   const handleUpgradeClick = useCallback(() => {
     if (upgradesEnabled && onUpgrade) onUpgrade();
   }, [upgradesEnabled, onUpgrade]);
+
+  const goalValid = useMemo(() => hasValue(qrName) && !!tpl, [qrName, tpl]);
+  const destinationAccessible = flowType === 'static' || !!sel?.id;
+  const destinationValid = useMemo(
+    () => (destinationAccessible ? isDestinationComplete(tpl, values) : false),
+    [destinationAccessible, tpl, values]
+  );
+  const destinationHint = destinationValidationMessage(tpl);
   useEffect(() => {
     setMode(initialCodeId ? 'edit' : 'create');
   }, [initialCodeId]);
@@ -281,6 +390,39 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
       return next;
     });
   }, [steps, editingDynamic]);
+
+  const stepStatusById = useMemo(() => {
+    const mapping = {};
+    steps.forEach((step, index) => {
+      let status = 'pending';
+      switch (step.id) {
+        case 'type':
+          status = index <= safeStep ? 'complete' : 'pending';
+          break;
+        case 'goal':
+          status = goalValid ? (index <= safeStep ? 'complete' : 'pending') : (safeStep >= index ? 'error' : 'pending');
+          break;
+        case 'destination':
+          if (!destinationAccessible) {
+            status = 'pending';
+          } else if (!destinationValid) {
+            status = safeStep >= index ? 'error' : 'pending';
+          } else {
+            status = index <= safeStep ? 'complete' : 'pending';
+          }
+          break;
+        case 'review': {
+          const ready = goalValid && (!destinationAccessible || destinationValid);
+          status = ready ? (index < safeStep ? 'complete' : 'pending') : (safeStep >= index ? 'error' : 'pending');
+          break;
+        }
+        default:
+          status = index < safeStep ? 'complete' : 'pending';
+      }
+      mapping[step.id] = status;
+    });
+    return mapping;
+  }, [steps, safeStep, goalValid, destinationAccessible, destinationValid]);
 
   useEffect(() => {
     if (!limitApplies) {
@@ -814,6 +956,13 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
               title="Choose your QR type"
               subtitle="Pick a dynamic code to edit destinations later or switch to a static code for instant exports."
             />
+            <div className="onboarding-callout" role="note">
+              <Icon name="sparkles" size={20} />
+              <div>
+                <p><strong>Dynamic QR codes</strong> stay flexible — you can update destinations, track scans, and reuse the same printout.</p>
+                <p><strong>Static QR codes</strong> encode the content itself, making them perfect for menus, Wi‑Fi details, or contact cards that never change.</p>
+              </div>
+            </div>
             <div className="template-grid">
               <button
                 type="button"
@@ -864,7 +1013,10 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
       }
       case 'goal': {
         const isCreatingNewDynamic = isDynamic && !sel;
-        const continueDisabled = (!qrName.trim()) || (isCreatingNewDynamic && (busy || dynamicLimitReached));
+        const continueDisabled = (!goalValid) || (isCreatingNewDynamic && (busy || dynamicLimitReached));
+        const goalIssues = [];
+        if (!hasValue(qrName)) goalIssues.push('Add a name for this QR');
+        if (!tpl) goalIssues.push('Pick a template');
         return (
           <GlassCard className="dynamic-step-card">
             <SectionHeading
@@ -923,6 +1075,12 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                 );
               })}
             </div>
+            {goalIssues.length > 0 && (
+              <div className="inline-validation" role="alert">
+                <Icon name="error" size={16} />
+                <span>{goalIssues.join('. ')}.</span>
+              </div>
+            )}
             <div className="dynamic-step-actions">
               <button
                 className="btn-primary"
@@ -956,6 +1114,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
             </GlassCard>
           );
         }
+        const destinationContinueDisabled = !destinationAccessible || !destinationValid;
         return (
           <GlassCard className="dynamic-step-card">
             <SectionHeading
@@ -966,11 +1125,18 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                 : 'Everything you enter here is encoded directly inside the QR.'}
             />
             <TemplateDataForm type={tpl} values={values} onChange={onValueChange} />
+            {destinationAccessible && !destinationValid && (
+              <div className="inline-validation" role="alert">
+                <Icon name="error" size={16} />
+                <span>{destinationHint}</span>
+              </div>
+            )}
             <div className="dynamic-step-actions">
               <button className="btn-secondary ghost" onClick={() => goToStepId('goal')}>Back</button>
               <button
                 className="btn-primary"
                 onClick={() => goToStepId(hasBrandingStep ? 'branding' : 'review')}
+                disabled={destinationContinueDisabled}
               >
                 {hasBrandingStep ? 'Next: Branding' : 'Continue to review'}
               </button>
@@ -1235,6 +1401,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
             current={safeStep}
             onSelect={handleSelectStep}
             orientation="horizontal"
+            statusById={stepStatusById}
           />
         </div>
         {/* Mobile step header (visible only on small screens) */}
@@ -1251,9 +1418,43 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
             <div style={{ fontWeight: 700 }}>{safeStep + 1} / {steps.length}</div>
             <div style={{ fontSize: 12, color: '#94a3b8' }}>{currentStep.title}</div>
           </div>
-          <button type="button" className="icon-button" aria-label="Next step" onClick={() => setStep(s => Math.min(steps.length - 1, s + 1))}>▶</button>
+          <div className="mobile-step-header-controls">
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Open step navigator"
+              onClick={() => setMobileRailOpen(true)}
+              aria-haspopup="dialog"
+            >
+              <Icon name="menu" size={16} />
+            </button>
+            <button type="button" className="icon-button" aria-label="Next step" onClick={() => setStep(s => Math.min(steps.length - 1, s + 1))}>▶</button>
+          </div>
         </div>
       </div>
+
+      {mobileRailOpen && (
+        <div className="mobile-step-rail-overlay" role="dialog" aria-modal="true" aria-label="Step navigation">
+          <div className="mobile-step-rail-card">
+            <div className="mobile-step-rail-card-header">
+              <span>Jump to a step</span>
+              <button type="button" className="icon-button" onClick={() => setMobileRailOpen(false)} aria-label="Close step navigation">
+                <Icon name="close" size={16} />
+              </button>
+            </div>
+            <StepRail
+              steps={steps}
+              current={safeStep}
+              onSelect={(index, step) => {
+                handleSelectStep(index, step);
+                setMobileRailOpen(false);
+              }}
+              statusById={stepStatusById}
+              compact
+            />
+          </div>
+        </div>
+      )}
 
       <div className={layoutClasses.join(' ')}>
         <div className="dynamic-main-column">
@@ -1327,16 +1528,11 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                 <canvas ref={previewRef} style={{ maxWidth: '100%', height: 'auto' }} />
               </div>
               {previewMode === 'content' && (
-                <div className="preview-phone">
-                  <div className="preview-phone-notch" />
-                  <div className="preview-phone-screen">
-                    <LivePreview type={tpl} values={values} variant="phone" />
-                  </div>
-                </div>
+                <PayloadPreviewFrame src={previewUrl} />
               )}
               <div className="preview-note">
                 {previewMode === 'content'
-                  ? 'This is a friendly mock of what scanners will read after the QR loads.'
+                  ? 'This live preview matches the landing page your scanners will see.'
                   : isDynamic
                     ? (sel?.id ? 'The QR canvas mirrors your current settings.' : 'Create or select a dynamic QR to view the live canvas.')
                     : 'This QR is rendered locally from your static content.'}
@@ -1375,4 +1571,49 @@ function MobilePreviewModal({ open, data, onClose }) {
     );
   }
   return content;
+}
+
+function PayloadPreviewFrame({ src }) {
+  const frameRef = useRef(null);
+
+  useEffect(() => {
+    const iframe = frameRef.current;
+    if (!iframe) return;
+    const handleLoad = () => {
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (!doc) return;
+        const bodyHeight = doc.body ? doc.body.scrollHeight : 0;
+        const docHeight = doc.documentElement ? doc.documentElement.scrollHeight : 0;
+        const ideal = Math.max(bodyHeight, docHeight, 540);
+        iframe.style.height = `${Math.min(Math.max(ideal, 540), 1200)}px`;
+      } catch {
+        iframe.style.height = '720px';
+      }
+    };
+    iframe.style.height = '720px';
+    iframe.addEventListener('load', handleLoad);
+    return () => iframe.removeEventListener('load', handleLoad);
+  }, [src]);
+
+  if (!src) {
+    return (
+      <div className="live-preview-frame fallback">
+        <p>Populate the template details to see the live landing experience.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="live-preview-frame">
+      <iframe
+        key={src}
+        ref={frameRef}
+        src={src}
+        title="QR landing preview"
+        loading="lazy"
+        allow="clipboard-write"
+      />
+    </div>
+  );
 }

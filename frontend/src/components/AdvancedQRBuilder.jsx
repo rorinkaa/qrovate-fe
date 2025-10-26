@@ -7,9 +7,15 @@ import FileUpload from './FileUpload.jsx';
 // import '../lib/qrcode-min'; // (placeholder for real generator if needed)
 
 const TYPES = [
-  'TEXT','URL','Phone','SMS','Email','Whatsapp','Facetime','Location','WiFi','Event','Vcard',
-  'Crypto','PayPal','UPI Payment','EPC Payment','PIX Payment'
+  'TEXT', 'URL', 'Phone', 'SMS', 'Email', 'Whatsapp', 'Facetime', 'Location', 'WiFi', 'Event', 'Vcard',
+  'PDF', 'MP3', 'AppLink', 'Gallery',
+  'Crypto', 'PayPal', 'UPI Payment', 'EPC Payment', 'PIX Payment'
 ];
+
+const ensureHttp = (value = '') => {
+  if (!value) return '';
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+};
 
 const initialState = {
   type: 'URL',
@@ -56,6 +62,14 @@ function buildPayload(type, v){
     case 'Vcard': {
       return `BEGIN:VCARD\nVERSION:3.0\nN:${v.last||''};${v.first||''}\nEMAIL:${v.email||''}\nTEL:${v.phone||''}\nORG:${v.org||''}\nTITLE:${v.title||''}\nADR:${v.address||''}\nURL:${v.url||''}\nEND:VCARD`;
     }
+    case 'PDF':
+      return ensureHttp(v.fileUrl || '');
+    case 'MP3':
+      return ensureHttp(v.fileUrl || '');
+    case 'AppLink':
+      return ensureHttp(v.fallbackUrl || v.iosUrl || v.androidUrl || v.windowsUrl || v.macUrl || '');
+    case 'Gallery':
+      return ensureHttp(v.ctaUrl || '');
     case 'Crypto': {
       const scheme = (v.symbol||'BTC').toLowerCase();
       const addr = v.address||'';

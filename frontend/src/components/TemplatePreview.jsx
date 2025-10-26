@@ -120,14 +120,34 @@ function describeTemplate(type, values) {
 
   switch (normalizedType) {
     case 'TEXT': {
-      const text = values.text || 'Hello there! Welcome to our QR.';
+      const headline = values.headline || 'Share an announcement';
+      const subheadline = values.subheadline || 'Give scanners the context they need.';
+      const body = values.text || 'Hello there! Welcome to our QR.';
+      const bullets = (values.bulletPoints || '').split('\n').filter(Boolean);
       return finalize({
-        eyebrow: 'Text snippet',
-        title: 'Instant message',
-        subtitle: 'Shown immediately after scanning.',
-        body: text,
-        inlineSummary: text.slice(0, 90),
-        tip: 'Great for coupons, promo codes, and short announcements.'
+        eyebrow: 'Branded content',
+        title: headline,
+        subtitle: subheadline,
+        body: (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>{body}</div>
+            {bullets.length > 0 && (
+              <ul style={{ paddingLeft: 18, margin: 0, color: '#475569', fontSize: 14 }}>
+                {bullets.slice(0, 3).map((line, idx) => (
+                  <li key={idx}>{line}</li>
+                ))}
+              </ul>
+            )}
+            {(values.ctaLabel || values.secondaryCtaLabel) && (
+              <div style={{ display: 'flex', gap: 8 }}>
+                {values.ctaLabel && <span style={{ background: accent, color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: 12 }}>{values.ctaLabel}</span>}
+                {values.secondaryCtaLabel && <span style={{ fontSize: 12, color: accent }}>{values.secondaryCtaLabel}</span>}
+              </div>
+            )}
+          </div>
+        ),
+        inlineSummary: headline.slice(0, 70),
+        tip: 'Use for landing copy with CTAs and bullet highlights.'
       });
     }
     case 'PHONE': {
@@ -206,11 +226,13 @@ function describeTemplate(type, values) {
       const ssid = values.ssid || 'MyGuestWiFi';
       const auth = values.auth || 'WPA';
       const password = values.password || 'super-secret';
+      const venue = values.venue || '';
       return finalize({
         eyebrow: 'Wi‑Fi login',
         title: ssid,
-        subtitle: `Security: ${auth}`,
+        subtitle: venue || `Security: ${auth}`,
         highlight: `Password: ${password || '—'}`,
+        body: values.notes ? `Notes: ${values.notes}` : undefined,
         inlineSummary: `Wi‑Fi SSID “${ssid}”`,
         tip: 'Scanning connects guests without typing credentials.'
       });
@@ -219,11 +241,23 @@ function describeTemplate(type, values) {
       const summary = values.summary || 'Product Launch Event';
       const start = formatDateTime(values.start);
       const location = values.location || 'Main HQ Auditorium';
+      const agenda = toLines(values.agenda);
+      const timezone = values.timezone || '';
       return finalize({
         eyebrow: 'Calendar event',
         title: summary,
-        subtitle: start,
-        body: location,
+        subtitle: timezone ? `${start} • ${timezone}` : start,
+        body: (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div><strong>Venue:</strong> {location}</div>
+            {agenda.length > 0 && (
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: '#475569' }}>
+                {agenda.slice(0, 3).map((item, idx) => <li key={idx}>{item}</li>)}
+              </ul>
+            )}
+            {values.ctaLabel && <div style={{ color: accent }}>CTA: {values.ctaLabel}</div>}
+          </div>
+        ),
         inlineSummary: `${summary} • ${start}`,
         tip: 'Adds the event to the attendee’s calendar app.'
       });
@@ -233,11 +267,33 @@ function describeTemplate(type, values) {
       const title = values.title || values.org || 'Brand Ambassador • QRovate';
       const phone = values.phone || '+1 555 123 4567';
       const email = values.email || 'alex@example.com';
+      const pronouns = values.pronouns || '';
+      const bio = values.bio || '';
+      const socials = [
+        { label: 'LinkedIn', value: values.linkedin },
+        { label: 'Instagram', value: values.instagram },
+        { label: 'Twitter', value: values.twitter },
+        { label: 'Facebook', value: values.facebook },
+        { label: 'Website', value: values.url }
+      ].filter(item => !!item.value);
       return finalize({
         eyebrow: 'Digital business card',
         title: name,
-        subtitle: title,
-        body: `Phone: ${phone}\nEmail: ${email}`,
+        subtitle: pronouns ? `${title} • ${pronouns}` : title,
+        body: (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div>Phone: {phone}</div>
+            <div>Email: {email}</div>
+            {bio && <div style={{ fontSize: 13, color: '#475569' }}>{bio}</div>}
+            {socials.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {socials.slice(0, 4).map(item => (
+                  <span key={item.label} style={{ padding: '4px 10px', borderRadius: 999, background: `${accent}16`, color: accent, fontSize: 11, fontWeight: 600 }}>{item.label}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        ),
         inlineSummary: `${name} • ${phone}`,
         tip: 'Creates or updates a contact in their address book.'
       }, { preserveIcon: true });
@@ -312,6 +368,10 @@ function describeTemplate(type, values) {
       const bgColor = values.backgroundColor || '#ffffff';
       const textColor = values.textColor || '#000000';
       const accentColor = values.accentColor || '#2563eb';
+      const title = values.title || '';
+      const description = values.description || '';
+      const tags = (values.tags || '').split(',').map(tag => tag.trim()).filter(Boolean);
+      const notes = (values.notes || '').split('\n').filter(Boolean);
       const filename = values.fileName || (url ? (() => {
         try {
           const parts = String(url).split('/');
@@ -321,9 +381,9 @@ function describeTemplate(type, values) {
         }
       })() : 'document.pdf');
       return finalize({
-        eyebrow: 'PDF Document',
-        title: url ? host : 'PDF Download',
-        subtitle: 'Tap to download or view the document.',
+        eyebrow: 'PDF handout',
+        title: title || filename,
+        subtitle: description || (url ? `Hosted on ${host}` : 'Tap to tailor your PDF download page.'),
         body: (
           <div style={{
             background: bgColor,
@@ -335,58 +395,78 @@ function describeTemplate(type, values) {
             gap: 12,
             minHeight: 200
           }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12
-            }}>
-              <div style={{
-                fontSize: 32,
-                color: accentColor
-              }}>
-                <Icon name="file" size={32} />
-              </div>
-              <div style={{
-                flex: 1,
-                color: textColor
-              }}>
-                <div style={{ fontWeight: 600, fontSize: 16 }}>{filename}</div>
-                <div style={{ fontSize: 12, opacity: 0.7 }}>PDF Document</div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              {values.thumbnailUrl && (
+                <img
+                  src={values.thumbnailUrl}
+                  alt=""
+                  style={{
+                    width: 76,
+                    height: 96,
+                    objectFit: 'cover',
+                    borderRadius: 10,
+                    boxShadow: '0 18px 32px -18px rgba(15,23,42,0.35)'
+                  }}
+                />
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Icon name="file" size={28} style={{ color: accentColor }} />
+                  <div style={{ fontWeight: 600, fontSize: 16, color: textColor }}>{filename}</div>
+                </div>
+                <div style={{ fontSize: 13, color: '#64748b', display: 'flex', gap: 12 }}>
+                  {values.version && <span>Version {values.version}</span>}
+                  {values.fileSize && <span>{values.fileSize}</span>}
+                </div>
+                {values.updatedAt && (
+                  <div style={{ fontSize: 12, color: '#94a3b8' }}>Updated {values.updatedAt}</div>
+                )}
               </div>
             </div>
-            <div style={{
-              background: '#f8f9fa',
-              borderRadius: 4,
-              padding: '12px',
-              fontSize: 12,
-              color: '#666',
-              lineHeight: 1.4
-            }}>
-              <div>Sample text from the PDF document...</div>
-              <div style={{ marginTop: 4 }}>This is a preview of the content.</div>
-              <div style={{ marginTop: 4 }}>Page 1 of 5</div>
+            {tags.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {tags.slice(0, 5).map(tag => (
+                  <span key={tag} style={{
+                    padding: '4px 10px',
+                    borderRadius: 999,
+                    background: `${accentColor}15`,
+                    color: accentColor,
+                    fontSize: 11,
+                    fontWeight: 600
+                  }}>{tag}</span>
+                ))}
+              </div>
+            )}
+            <div style={{ background: '#f8fafc', borderRadius: 6, padding: '12px', fontSize: 13, color: '#475569', lineHeight: 1.5 }}>
+              <strong style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: accentColor, marginBottom: 6 }}>Version notes</strong>
+              {notes.length > 0 ? (
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {notes.slice(0, 3).map((note, idx) => <li key={idx}>{note}</li>)}
+                </ul>
+              ) : (
+                <div>Add bullet points to highlight what changed.</div>
+              )}
             </div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: 8
-            }}>
-              <button style={{
+            <button
+              style={{
                 background: accentColor,
                 color: 'white',
                 border: 'none',
-                borderRadius: 20,
-                padding: '8px 16px',
+                borderRadius: 12,
+                padding: '10px 18px',
                 fontSize: 14,
+                fontWeight: 600,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '8px'
-              }}>
-                <Icon name="download" size={16} />
-                <span>Download PDF</span>
-              </button>
-            </div>
+                gap: 8,
+                marginTop: 'auto',
+                alignSelf: 'flex-start'
+              }}
+            >
+              <Icon name="download" size={16} />
+              <span>Download PDF</span>
+            </button>
           </div>
         ),
         inlineSummary: url ? `PDF from ${host}` : 'Upload PDF file.',
@@ -396,9 +476,23 @@ function describeTemplate(type, values) {
     case 'MP3': {
       const url = values.fileUrl || '';
       const host = cleanHost(url);
-      const bgColor = values.backgroundColor || '#f1f5f9';
-      const textColor = values.textColor || '#475569';
-      const accentColor = values.accentColor || '#2563eb';
+      const bgColor = values.backgroundColor || '#0f172a';
+      const textColor = values.textColor || '#e2e8f0';
+      const accentColor = values.accentColor || '#38bdf8';
+      const title = values.title || 'Featured track';
+      const artist = values.artist || 'Artist name';
+      const album = values.album || '';
+      const coverUrl = values.coverUrl || '';
+      const streaming = (values.streamingLinks || '').split('\n').map(line => {
+        const [label, link] = line.split('|').map(part => part?.trim());
+        if (!label || !link) return null;
+        return { label, link };
+      }).filter(Boolean);
+      const moreTracks = (values.moreTracks || '').split('\n').map(line => {
+        const [trackTitle, duration, link] = line.split('|').map(part => part?.trim());
+        if (!trackTitle) return null;
+        return { title: trackTitle, duration, link };
+      }).filter(Boolean);
       const filename = values.fileName || (url ? (() => {
         try {
           const parts = String(url).split('/');
@@ -408,94 +502,179 @@ function describeTemplate(type, values) {
         }
       })() : 'audio.mp3');
       return finalize({
-        eyebrow: 'Audio File',
-        title: url ? host : 'Audio Player',
-        subtitle: 'Tap to play the audio file.',
+        eyebrow: 'Music landing',
+        title,
+        subtitle: artist ? `${artist}${album ? ` • ${album}` : ''}` : (url ? host : 'Upload audio to design the player.'),
         body: (
           <div style={{
             background: bgColor,
-            borderRadius: 8,
-            padding: '16px',
-            border: `1px solid ${accentColor}20`,
+            borderRadius: 12,
+            padding: '18px',
+            border: `1px solid ${accentColor}25`,
             display: 'flex',
             flexDirection: 'column',
-            gap: 12,
-            minHeight: 200
+            gap: 14,
+            minHeight: 220
           }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12
-            }}>
-              <div style={{
-                fontSize: 32,
-                color: accentColor
-              }}>
-                <Icon name="audio" size={32} />
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+              <div style={{ width: 72, height: 72, borderRadius: 24, overflow: 'hidden', background: '#1f2937', boxShadow: '0 24px 40px -28px rgba(15,23,42,0.65)' }}>
+                {coverUrl ? (
+                  <img src={coverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: accentColor }}>
+                    <Icon name="audio" size={30} />
+                  </div>
+                )}
               </div>
-              <div style={{
-                flex: 1,
-                color: textColor
-              }}>
-                <div style={{ fontWeight: 600, fontSize: 16 }}>{filename}</div>
-                <div style={{ fontSize: 12, opacity: 0.7 }}>Audio File</div>
+              <div style={{ flex: 1, color: textColor, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ fontSize: 16, fontWeight: 600 }}>{title}</div>
+                <div style={{ fontSize: 13, opacity: 0.75 }}>{artist}{album ? ` • ${album}` : ''}</div>
+                {streaming.length > 0 && (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {streaming.slice(0, 2).map(item => (
+                      <span key={item.label} style={{ background: 'rgba(255,255,255,0.08)', padding: '4px 10px', borderRadius: 999, fontSize: 11 }}>{item.label}</span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             {url ? (
               <audio
                 controls
-                style={{ width: '100%', borderRadius: 8 }}
-                onError={(e) => console.error('Audio load error:', e.target.error, 'URL:', url)}
-                onLoadStart={() => console.log('Audio loading:', url)}
-                onCanPlay={() => console.log('Audio can play:', url)}
+                style={{ width: '100%', borderRadius: 12, background: 'rgba(15,23,42,0.5)', padding: 4 }}
               >
                 <source src={url} type="audio/mpeg" />
                 Your browser does not support the audio element.
               </audio>
             ) : (
               <div style={{
-                background: '#f8f9fa',
-                borderRadius: 4,
+                background: 'rgba(15,23,42,0.55)',
+                borderRadius: 12,
                 padding: '12px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12
               }}>
                 <div style={{
-                  width: 40,
-                  height: 40,
+                  width: 44,
+                  height: 44,
                   borderRadius: '50%',
                   background: accentColor,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: 'white',
+                  color: '#0f172a',
                   fontSize: 18
                 }}>▶</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, fontWeight: 500, color: textColor }}>Preview Player</div>
-                  <div style={{ fontSize: 12, color: '#666' }}>Upload an MP3 to play</div>
+                  <div style={{ fontSize: 12, color: '#94a3b8' }}>Upload MP3 to enable controls</div>
                 </div>
-                <div style={{
-                  width: 100,
-                  height: 4,
-                  background: '#e2e8f0',
-                  borderRadius: 2,
-                  position: 'relative'
-                }}>
-                  <div style={{
-                    width: '0%',
-                    height: '100%',
-                    background: accentColor,
-                    borderRadius: 2
-                  }}></div>
+              </div>
+            )}
+            {streaming.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {streaming.slice(0, 3).map(item => (
+                  <span key={item.label} style={{
+                    background: '#0b1120',
+                    color: accentColor,
+                    border: `1px solid ${accentColor}55`,
+                    borderRadius: 999,
+                    padding: '6px 12px',
+                    fontSize: 12
+                  }}>{item.label}</span>
+                ))}
+              </div>
+            )}
+            {moreTracks.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ fontSize: 12, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.12em' }}>More from the artist</div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  {moreTracks.slice(0, 3).map(item => (
+                    <div key={item.title} style={{
+                      flex: '1 1 0',
+                      background: 'rgba(15,23,42,0.6)',
+                      borderRadius: 12,
+                      padding: 12,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 4,
+                      fontSize: 12,
+                      color: '#cbd5f5'
+                    }}>
+                      <div style={{ fontWeight: 600 }}>{item.title}</div>
+                      {item.duration && <div style={{ color: '#94a3b8' }}>{item.duration}</div>}
+                    </div>
+                  ))}
                 </div>
+              </div>
+            )}
+            <div style={{ fontSize: 11, color: '#64748b' }}>{filename}</div>
+          </div>
+        ),
+        inlineSummary: url ? `MP3 from ${host}` : 'Upload audio file.',
+        tip: 'Opens an immersive audio landing with player and track list.'
+      });
+    }
+    case 'APPLINK': {
+      const headline = values.headline || 'Install our app';
+      const subheadline = values.subheadline || 'One link takes scanners to the right store.';
+      const features = (values.features || '').split('\n').filter(Boolean);
+      const badges = (values.storeBadges || '').split('\n').map(line => {
+        const [label] = line.split('|');
+        return label?.trim();
+      }).filter(Boolean);
+      return finalize({
+        eyebrow: 'Smart app link',
+        title: headline,
+        subtitle: subheadline,
+        body: (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {badges.slice(0, 3).map((label) => (
+                <span key={label} style={{ background: `${accent}16`, color: accent, padding: '6px 12px', borderRadius: 999, fontSize: 12 }}>{label}</span>
+              ))}
+            </div>
+            {features.length > 0 && (
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: '#475569' }}>
+                {features.slice(0, 3).map((feature, idx) => <li key={idx}>{feature}</li>)}
+              </ul>
+            )}
+          </div>
+        ),
+        inlineSummary: 'Smart app redirection',
+        tip: 'Detects iOS, Android, desktop, and falls back gracefully.'
+      });
+    }
+    case 'GALLERY': {
+      const title = values.title || 'Showcase gallery';
+      const intro = values.intro || 'Highlight your dishes, projects, or inventory.';
+      const items = (values.items || '').split('\n').map(line => {
+        const [category, itemTitle] = line.split('|');
+        return { category: (category || '').trim(), title: (itemTitle || '').trim() };
+      }).filter(item => item.title);
+      return finalize({
+        eyebrow: 'Gallery/menu',
+        title,
+        subtitle: intro,
+        body: (
+          <div style={{ display: 'grid', gap: 8 }}>
+            {items.slice(0, 3).map((item, idx) => (
+              <div key={idx} style={{ borderRadius: 10, padding: '10px 12px', background: 'rgba(148, 163, 184, 0.14)', display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span>{item.title}</span>
+                {item.category && <span style={{ color: accent, fontWeight: 600 }}>{item.category}</span>}
+              </div>
+            ))}
+            {values.ctaLabel && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                <Icon name="external" size={14} style={{ color: accent }} />
+                <span style={{ color: accent }}>{values.ctaLabel}</span>
               </div>
             )}
           </div>
         ),
-        inlineSummary: url ? `Audio from ${host}` : 'Upload audio file.',
-        tip: 'Plays the MP3 directly in the browser.'
+        inlineSummary: `${items.length} featured items`,
+        tip: 'Perfect for menus, lookbooks, and product teasers.'
       });
     }
     case 'VOUCHER': {
