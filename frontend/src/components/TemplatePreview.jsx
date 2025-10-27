@@ -1,5 +1,5 @@
 import React from 'react';
-import { TEMPLATE_LIBRARY } from './TemplateDataForm.jsx';
+import { TEMPLATE_LIBRARY, isComingSoonTemplate } from './TemplateDataForm.jsx';
 import Icon from './ui/Icon.jsx';
 
 const TEMPLATE_META_LOOKUP = Object.fromEntries(
@@ -103,6 +103,23 @@ function describeTemplate(type, values) {
   const accent = baseMeta?.accent || '#2563eb';
   const icon = baseMeta?.icon || 'sparkles';
 
+  if (isComingSoonTemplate(normalizedType)) {
+    return {
+      eyebrow: 'Coming soon',
+      title: baseMeta?.title || 'Template in development',
+      subtitle: baseMeta?.description || 'We’re polishing this experience.',
+      body: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, color: '#475569', fontSize: 14, lineHeight: 1.6 }}>
+          <p style={{ margin: 0 }}>We’re putting the finishing touches on this template. Check back shortly for the full interactive preview.</p>
+        </div>
+      ),
+      accent,
+      icon,
+      inlineSummary: 'Launching soon',
+      tip: 'Pick another template or revisit when this goes live.'
+    };
+  }
+
   const finalize = (descriptor, { preserveAccent = false, preserveIcon = false } = {}) => {
     const result = { ...descriptor };
     if (preserveAccent) {
@@ -149,6 +166,83 @@ function describeTemplate(type, values) {
         inlineSummary: headline.slice(0, 70),
         tip: 'Use for landing copy with CTAs and bullet highlights.'
       });
+    }
+    case 'LINKTREE': {
+      const heroTitle = values.heroTitle || 'Explore our world';
+      const heroSubtitle = values.heroSubtitle || 'Stay connected across every channel.';
+      const intro = values.intro || '';
+      const accentColor = values.accentColor || accent;
+      const textColor = values.textColor || '#0f172a';
+      const buttonStyle = String(values.buttonStyle || 'rounded').toLowerCase();
+      const primary = (values.primaryCtaLabel && values.primaryCtaUrl)
+        ? { label: values.primaryCtaLabel, url: values.primaryCtaUrl }
+        : null;
+      const links = (values.secondaryLinks || '')
+        .split('\n')
+        .map(line => {
+          const [label, url] = line.split('|').map(part => part?.trim());
+          if (!label || !url) return null;
+          return { label, url };
+        })
+        .filter(Boolean)
+        .slice(0, 5);
+      const totalLinks = (primary ? 1 : 0) + links.length;
+
+      return finalize({
+        eyebrow: 'Link hub',
+        title: heroTitle,
+        subtitle: heroSubtitle,
+        body: (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, color: textColor }}>
+            {intro && (
+              <p style={{ margin: 0, lineHeight: 1.6 }}>{intro}</p>
+            )}
+            {primary && (
+              <button
+                type="button"
+                style={{
+                  background: accentColor,
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: buttonStyle === 'pill' ? 999 : 16,
+                  padding: '12px 18px',
+                  fontWeight: 600,
+                  fontSize: 14,
+                  boxShadow: '0 8px 20px rgba(79, 70, 229, 0.18)'
+                }}
+              >
+                {primary.label}
+              </button>
+            )}
+            {links.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {links.map((link, idx) => (
+                  <div
+                    key={`${link.label}-${idx}`}
+                    style={{
+                      borderRadius: buttonStyle === 'outline' ? 16 : 14,
+                      border: `1px solid ${buttonStyle === 'outline' ? accentColor : 'rgba(148,163,184,0.3)'}`,
+                      padding: '10px 14px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: 13,
+                      color: buttonStyle === 'outline' ? accentColor : textColor,
+                      background: buttonStyle === 'outline' ? 'transparent' : '#ffffff'
+                    }}
+                  >
+                    <span>{link.label}</span>
+                    <span style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Visit</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ),
+        inlineSummary: totalLinks > 0 ? `${totalLinks} link${totalLinks === 1 ? '' : 's'} ready` : 'Add links to activate',
+        tip: 'Perfect for bios, campaigns, and curated resources.',
+        accent: accentColor
+      }, { preserveAccent: true });
     }
     case 'PHONE': {
       const phone = values.phone || '+1 555 123 4567';

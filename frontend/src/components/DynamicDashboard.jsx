@@ -8,7 +8,8 @@ import {
   TEMPLATE_DEFAULTS,
   buildPayload,
   TemplateDataForm,
-  normalizeUrl
+  normalizeUrl,
+  isComingSoonTemplate
 } from './TemplateDataForm.jsx';
 import GlassCard from './ui/GlassCard.jsx';
 import StepRail from './ui/StepRail.jsx';
@@ -118,6 +119,7 @@ const TEMPLATE_META = {
   Whatsapp: { icon: 'message', title: 'WhatsApp chat', description: 'Start a conversation with your team.' },
   PDF: { icon: 'file', title: 'PDF Document', description: 'Link to a PDF file for download or view.' },
   MP3: { icon: 'audio', title: 'Audio File', description: 'Link to an MP3 or audio file.' },
+  LinkTree: { icon: 'list', title: 'Link hub', description: 'Curate multiple links with a branded landing experience.' },
   Voucher: { icon: 'ticket', title: 'Discount Voucher', description: 'Share a promo code or voucher details.' },
   PIX: { icon: 'pix', title: 'PIX payment', description: 'Collect payments via Brazil’s PIX system.' }
 };
@@ -162,6 +164,18 @@ function destinationSummary(type, values) {
       const url = String(values.fileUrl || '').trim();
       return url ? normalizeUrl(url) : 'Upload an audio file.';
     }
+    case 'LinkTree': {
+      const primaryUrl = (values.primaryCtaUrl || '').trim();
+      if (primaryUrl) {
+        const label = (values.primaryCtaLabel || 'Primary link').trim();
+        return `${label} → ${normalizeUrl(primaryUrl)}`;
+      }
+      const links = (values.secondaryLinks || '').split('\n').map(line => line.split('|')[1]).filter(Boolean);
+      if (links.length > 0) {
+        return `Link hub with ${links.length} link${links.length === 1 ? '' : 's'}.`;
+      }
+      return 'Add at least one link.';
+    }
     case 'Voucher': {
       return values.code ? `Voucher: ${values.code}` : 'Add voucher details.';
     }
@@ -179,8 +193,10 @@ const REQUIRED_HINTS = {
   WHATSAPP: 'Add the WhatsApp phone number.',
   FACETIME: 'Provide the FaceTime phone number or email address.',
   LOCATION: 'Enter coordinates or a map search query.',
-  WIFI: 'Add the Wi‑Fi network name and password.',
-  EVENT: 'Include at least a title and start date for your event.',
+  WIFI: 'This template is coming soon — stay tuned.',
+  EVENT: 'This template is coming soon — stay tuned.',
+  APPLINK: 'This template is coming soon — stay tuned.',
+  GALLERY: 'This template is coming soon — stay tuned.',
   VCARD: 'Add contact details such as name, email, or phone.',
   PDF: 'Upload a PDF file to link to.',
   MP3: 'Upload an audio file to link to.',
@@ -189,7 +205,8 @@ const REQUIRED_HINTS = {
   PAYPAL: 'Enter your PayPal username.',
   'UPI PAYMENT': 'Provide your UPI handle (VPA).',
   'EPC PAYMENT': 'Enter the account name and IBAN.',
-  'PIX PAYMENT': 'Paste the PIX payload string.'
+  'PIX PAYMENT': 'Paste the PIX payload string.',
+  LINKTREE: 'Add at least one link or CTA for your hub.'
 };
 
 const hasValue = (value) => {
@@ -199,6 +216,7 @@ const hasValue = (value) => {
 };
 
 function isDestinationComplete(template, values = {}) {
+  if (isComingSoonTemplate(template)) return false;
   const type = (template || 'URL').toUpperCase();
   switch (type) {
     case 'URL':
@@ -229,6 +247,11 @@ function isDestinationComplete(template, values = {}) {
     case 'PDF':
     case 'MP3':
       return hasValue(values.fileUrl);
+    case 'LINKTREE': {
+      if (hasValue(values.primaryCtaUrl)) return true;
+      const links = (values.secondaryLinks || '').split('\n').map(line => line.split('|')[1]).filter(item => hasValue(item));
+      return links.length > 0;
+    }
     case 'VOUCHER':
       return hasValue(values.code);
     case 'CRYPTO':
@@ -999,7 +1022,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                 <span className="template-chevron">→</span>
               </button>
             </div>
-            <div className="dynamic-step-actions">
+            <div className="dynamic-step-actions step-actions-sticky">
               <button
                 className="btn-primary"
                 onClick={() => advanceTo('goal')}
@@ -1050,11 +1073,16 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
               {TEMPLATES.slice(0, 13).map(template => {
                 const meta = templateMeta(template);
                 const active = tpl === template;
+                const comingSoon = isComingSoonTemplate(template);
+                const classes = ['template-card'];
+                if (active) classes.push('active');
+                if (comingSoon) classes.push('coming-soon');
                 return (
                   <button
                     key={template}
                     type="button"
-                    className={['template-card', active ? 'active' : ''].join(' ')}
+                    className={classes.join(' ')}
+                    aria-disabled={comingSoon}
                     onClick={() => {
                       selectTemplate(template);
                       if (sel) {
@@ -1069,6 +1097,20 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                     <div className="template-body">
                       <strong>{meta.title}</strong>
                       <p>{meta.description}</p>
+                      {comingSoon && (
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.08em',
+                          color: '#2563eb'
+                        }}>
+                          <Icon name="sparkles" size={14} /> Coming soon
+                        </span>
+                      )}
                     </div>
                     <span className="template-chevron">→</span>
                   </button>
@@ -1081,7 +1123,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                 <span>{goalIssues.join('. ')}.</span>
               </div>
             )}
-            <div className="dynamic-step-actions">
+            <div className="dynamic-step-actions step-actions-sticky">
               <button
                 className="btn-primary"
                 onClick={() => advanceTo('destination')}
@@ -1106,7 +1148,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                 title="Set your destination"
                 subtitle="Create a dynamic QR first, then configure where it should send scanners."
               />
-              <div className="dynamic-step-actions">
+              <div className="dynamic-step-actions step-actions-sticky">
                 <button className="btn-primary" onClick={() => advanceTo('goal')} disabled={busy}>
                   {busy ? 'Creating…' : 'Create dynamic QR'}
                 </button>
@@ -1131,7 +1173,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                 <span>{destinationHint}</span>
               </div>
             )}
-            <div className="dynamic-step-actions">
+            <div className="dynamic-step-actions step-actions-sticky">
               <button className="btn-secondary ghost" onClick={() => goToStepId('goal')}>Back</button>
               <button
                 className="btn-primary"
@@ -1153,7 +1195,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                 title="Brand your QR"
                 subtitle="Create a dynamic QR first, then style colors, frames, and logos."
               />
-              <div className="dynamic-step-actions">
+            <div className="dynamic-step-actions step-actions-sticky">
                 <button className="btn-primary" onClick={() => advanceTo('goal')} disabled={busy}>
                   {busy ? 'Creating…' : 'Create dynamic QR'}
                 </button>
@@ -1281,7 +1323,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                 )}
               </div>
             </div>
-            <div className="dynamic-step-actions">
+            <div className="dynamic-step-actions step-actions-sticky">
               <button className="btn-secondary ghost" onClick={() => goToStepId('destination')}>Back</button>
               <button className="btn-primary" onClick={() => goToStepId('review')}>Next: Review</button>
             </div>
@@ -1297,7 +1339,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                 title="Review & launch"
                 subtitle="Create a dynamic QR first, then you can review analytics and share it."
               />
-              <div className="dynamic-step-actions">
+              <div className="dynamic-step-actions step-actions-sticky">
                 <button className="btn-primary" onClick={() => advanceTo('goal')} disabled={busy}>
                   {busy ? 'Creating…' : 'Create dynamic QR'}
                 </button>
@@ -1334,7 +1376,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                   </ul>
                 </div>
               </div>
-              <div className="dynamic-step-actions">
+              <div className="dynamic-step-actions step-actions-sticky">
                 <button className="btn-secondary ghost" onClick={() => goToStepId('branding')}>Back</button>
                 <button className="btn-primary" onClick={updateSelected} disabled={busy || !sel?.id}>
                   {busy ? 'Saving…' : 'Save changes'}
@@ -1373,7 +1415,7 @@ export default function DynamicDashboard({ user, initialCodeId = null, initialTy
                 <textarea readOnly value={staticPayload} style={{ width: '100%', minHeight: 80 }} />
               </div>
             </div>
-            <div className="dynamic-step-actions" style={{ gap: 12, flexWrap: 'wrap' }}>
+            <div className="dynamic-step-actions step-actions-sticky">
               <button className="btn-secondary ghost" onClick={() => goToStepId('branding')}>Back</button>
               <button type="button" className="btn-primary" onClick={saveStaticDesign}>Save static design</button>
             </div>

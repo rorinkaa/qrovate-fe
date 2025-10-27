@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { API, withAuth } from '../api';
 import FileUpload from './FileUpload';
+import { TEMPLATE_SCHEMAS, TEMPLATE_SECTION_ORDER, TEMPLATE_SECTION_TITLES } from './templateSchemas.js';
 
 export const TEMPLATE_LIBRARY = [
   {
@@ -22,58 +23,49 @@ export const TEMPLATE_LIBRARY = [
     accentSoft: 'rgba(124, 58, 237, 0.16)'
   },
   {
-    id: 'Phone',
-    title: 'Phone call',
-    description: 'Dial a number instantly after scanning.',
-    icon: 'phone',
-    category: 'contact',
-    accent: '#ef4444',
-    accentSoft: 'rgba(239, 68, 68, 0.18)'
+    id: 'PDF',
+    title: 'PDF document',
+    description: 'Publish a branded document landing with download CTA.',
+    icon: 'file',
+    category: 'content',
+    accent: '#dc2626',
+    accentSoft: 'rgba(220, 38, 38, 0.18)'
   },
   {
-    id: 'SMS',
-    title: 'SMS message',
-    description: 'Prefill a text message to your team or hotline.',
-    icon: 'message',
-    category: 'contact',
-    accent: '#00a884',
-    accentSoft: 'rgba(0, 168, 132, 0.18)'
+    id: 'MP3',
+    title: 'Music release',
+    description: 'Share a track with a rich player and streaming links.',
+    icon: 'audio',
+    category: 'content',
+    accent: '#7c3aed',
+    accentSoft: 'rgba(124, 58, 237, 0.16)'
   },
   {
-    id: 'Email',
-    title: 'Email draft',
-    description: 'Open a composed email with subject and body.',
-    icon: 'envelope',
+    id: 'Vcard',
+    title: 'Digital business card',
+    description: 'Save your contact details to their phone.',
+    icon: 'id',
     category: 'contact',
+    accent: '#8b5cf6',
+    accentSoft: 'rgba(139, 92, 246, 0.18)'
+  },
+  {
+    id: 'LinkTree',
+    title: 'Link hub',
+    description: 'Curate multiple links with a branded hero and actions.',
+    icon: 'list',
+    category: 'links',
+    accent: '#6366f1',
+    accentSoft: 'rgba(99, 102, 241, 0.16)'
+  },
+  {
+    id: 'AppLink',
+    title: 'App smart link',
+    description: 'Send people to the right app store with one scan.',
+    icon: 'smartphone',
+    category: 'links',
     accent: '#2563eb',
     accentSoft: 'rgba(37, 99, 235, 0.16)'
-  },
-  {
-    id: 'Whatsapp',
-    title: 'WhatsApp chat',
-    description: 'Start a WhatsApp conversation instantly.',
-    icon: 'message',
-    category: 'contact',
-    accent: '#25d366',
-    accentSoft: 'rgba(37, 211, 102, 0.18)'
-  },
-  {
-    id: 'Facetime',
-    title: 'FaceTime call',
-    description: 'Launch a FaceTime call or video session.',
-    icon: 'video',
-    category: 'contact',
-    accent: '#38bdf8',
-    accentSoft: 'rgba(56, 189, 248, 0.18)'
-  },
-  {
-    id: 'Location',
-    title: 'Map location',
-    description: 'Open maps with directions to your venue.',
-    icon: 'map',
-    category: 'events',
-    accent: '#0ea5e9',
-    accentSoft: 'rgba(14, 165, 233, 0.12)'
   },
   {
     id: 'WiFi',
@@ -94,42 +86,6 @@ export const TEMPLATE_LIBRARY = [
     accentSoft: 'rgba(249, 115, 22, 0.18)'
   },
   {
-    id: 'Vcard',
-    title: 'Digital business card',
-    description: 'Save your contact details to their phone.',
-    icon: 'id',
-    category: 'contact',
-    accent: '#8b5cf6',
-    accentSoft: 'rgba(139, 92, 246, 0.18)'
-  },
-  {
-    id: 'PDF',
-    title: 'PDF Document',
-    description: 'Link to a PDF file for download or view.',
-    icon: 'file',
-    category: 'content',
-    accent: '#dc2626',
-    accentSoft: 'rgba(220, 38, 38, 0.18)'
-  },
-  {
-    id: 'MP3',
-    title: 'Audio File',
-    description: 'Link to an MP3 or audio file.',
-    icon: 'audio',
-    category: 'content',
-    accent: '#7c3aed',
-    accentSoft: 'rgba(124, 58, 237, 0.16)'
-  },
-  {
-    id: 'AppLink',
-    title: 'App smart link',
-    description: 'Send people to the right app store with one scan.',
-    icon: 'smartphone',
-    category: 'links',
-    accent: '#2563eb',
-    accentSoft: 'rgba(37, 99, 235, 0.16)'
-  },
-  {
     id: 'Gallery',
     title: 'Gallery or menu',
     description: 'Showcase dishes, projects, or products beautifully.',
@@ -137,60 +93,6 @@ export const TEMPLATE_LIBRARY = [
     category: 'content',
     accent: '#ec4899',
     accentSoft: 'rgba(236, 72, 153, 0.18)'
-  },
-  {
-    id: 'Voucher',
-    title: 'Discount Voucher',
-    description: 'Share a promo code or voucher details.',
-    icon: 'ticket',
-    category: 'content',
-    accent: '#f59e0b',
-    accentSoft: 'rgba(245, 158, 11, 0.18)'
-  },
-  {
-    id: 'Crypto',
-    title: 'Crypto payment',
-    description: 'Request BTC, ETH, or other crypto payments.',
-    icon: 'crypto',
-    category: 'payments',
-    accent: '#fbbf24',
-    accentSoft: 'rgba(251, 191, 36, 0.2)'
-  },
-  {
-    id: 'PayPal',
-    title: 'PayPal checkout',
-    description: 'Send users to your PayPal.me payment link.',
-    icon: 'wallet',
-    category: 'payments',
-    accent: '#1070d1',
-    accentSoft: 'rgba(16, 112, 209, 0.18)'
-  },
-  {
-    id: 'UPI Payment',
-    title: 'UPI payment',
-    description: 'Collect INR payments via UPI apps.',
-    icon: 'upi',
-    category: 'payments',
-    accent: '#0f766e',
-    accentSoft: 'rgba(15, 118, 110, 0.2)'
-  },
-  {
-    id: 'EPC Payment',
-    title: 'SEPA transfer',
-    description: 'Generate a single euro payments area QR.',
-    icon: 'bank',
-    category: 'payments',
-    accent: '#2563eb',
-    accentSoft: 'rgba(37, 99, 235, 0.14)'
-  },
-  {
-    id: 'PIX Payment',
-    title: 'PIX payment',
-    description: 'Request instant payments via PIX (Brazil).',
-    icon: 'pix',
-    category: 'payments',
-    accent: '#22d3ee',
-    accentSoft: 'rgba(34, 211, 238, 0.18)'
   }
 ];
 
@@ -198,13 +100,18 @@ export const TEMPLATE_CATEGORIES = [
   { id: 'links', label: 'Links & social' },
   { id: 'content', label: 'Content & info' },
   { id: 'contact', label: 'Contact & messaging' },
-  { id: 'events', label: 'Events & access' },
-  { id: 'payments', label: 'Payments & checkout' }
+  { id: 'events', label: 'Events & access' }
 ];
 
 export const TEMPLATE_LIBRARY_MAP = Object.fromEntries(TEMPLATE_LIBRARY.map(item => [item.id, item]));
 
 export const TEMPLATES = TEMPLATE_LIBRARY.map(item => item.id);
+
+export const COMING_SOON_TEMPLATES = new Set(['APPLINK', 'WIFI', 'EVENT', 'GALLERY']);
+
+export function isComingSoonTemplate(id) {
+  return COMING_SOON_TEMPLATES.has(String(id || '').toUpperCase());
+}
 
 export const TEMPLATE_DEFAULTS = {
   URL: { url: '' },
@@ -272,7 +179,8 @@ export const TEMPLATE_DEFAULTS = {
     fileSize: '',
     thumbnailUrl: '',
     tags: '',
-    notes: ''
+    notes: '',
+    openInline: true
   },
   MP3: {
     fileUrl: '',
@@ -287,7 +195,11 @@ export const TEMPLATE_DEFAULTS = {
     heroImage: '',
     description: '',
     streamingLinks: '',
-    moreTracks: ''
+    moreTracks: '',
+    autoplay: false,
+    loop: false,
+    showQueue: true,
+    enableMiniPlayer: true
   },
   AppLink: {
     headline: '',
@@ -301,6 +213,24 @@ export const TEMPLATE_DEFAULTS = {
     backgroundImage: '',
     features: '',
     storeBadges: ''
+  },
+  LinkTree: {
+    heroTitle: '',
+    heroSubtitle: '',
+    intro: '',
+    primaryCtaLabel: '',
+    primaryCtaUrl: '',
+    secondaryLinks: '',
+    accentColor: '#6366f1',
+    backgroundColor: '#ffffff',
+    textColor: '#0f172a',
+    backgroundImage: '',
+    shareTitle: '',
+    shareDescription: '',
+    shareImage: '',
+    showShareActions: true,
+    enableCopyAll: false,
+    buttonStyle: 'rounded'
   },
   Gallery: {
     title: '',
@@ -320,6 +250,11 @@ export const TEMPLATE_DEFAULTS = {
 };
 
 export const normalizeUrl = (u) => /^https?:\/\//i.test(u || '') ? (u || '').trim() : (u ? `https://${u.trim()}` : '');
+
+function getTemplateMeta(templateId) {
+  const upperId = String(templateId || '').toUpperCase();
+  return TEMPLATE_LIBRARY.find(item => item.id.toUpperCase() === upperId) || null;
+}
 
 const toICSDate = (value) => {
   if (!value) return '';
@@ -451,15 +386,176 @@ export function buildPayload(type, v = {}) {
       return normalizeUrl(v.fallbackUrl || v.iosUrl || v.androidUrl || v.windowsUrl || v.macUrl || '');
     case 'Gallery':
       return normalizeUrl(v.ctaUrl || '');
+    case 'LinkTree': {
+      if (v.primaryCtaUrl) return normalizeUrl(v.primaryCtaUrl);
+      const firstLink = (v.secondaryLinks || '').split('\n').map(line => line.split('|')[1]).find(Boolean);
+      return normalizeUrl(firstLink || '');
+    }
     default:
       return '';
   }
 }
 
-function Field({ label, children }) {
+function ComingSoonNotice({ templateName, description }) {
+  return (
+    <div
+      className="coming-soon-notice"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: 12,
+        padding: '28px 24px',
+        borderRadius: 18,
+        border: '1px dashed #cbd5f5',
+        background: 'linear-gradient(135deg, rgba(241,245,249,0.9), rgba(226,232,240,0.6))'
+      }}
+    >
+      <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#2563eb' }}>In progress</span>
+      <h3 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#0f172a' }}>
+        {templateName} is coming soon
+      </h3>
+      {description ? (
+        <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: '#475569' }}>
+          {description}
+        </p>
+      ) : null}
+      <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: '#64748b' }}>
+        We’re polishing the experience for this template. Check back shortly or pick another QR type in the meantime.
+      </p>
+    </div>
+  );
+}
+
+function SectionAccordion({ title, description, children, defaultOpen = false }) {
+  return (
+    <details className="template-section" open={defaultOpen}>
+      <summary>
+        <div className="template-section-copy">
+          <span>{title}</span>
+          {description ? <p>{description}</p> : null}
+        </div>
+      </summary>
+      <div className="template-section-body">
+        {children}
+      </div>
+    </details>
+  );
+}
+
+function normalizeColorHex(input, fallback) {
+  if (!input) return fallback;
+  let value = input.trim();
+  if (!value.startsWith('#')) value = `#${value}`;
+  if (/^#[0-9a-fA-F]{3}$/.test(value)) {
+    const [, r, g, b] = value;
+    value = `#${r}${r}${g}${g}${b}${b}`;
+  }
+  if (/^#[0-9a-fA-F]{6}$/.test(value)) {
+    return value.toLowerCase();
+  }
+  return fallback;
+}
+
+function ColorFieldInput({ value, onChange }) {
+  const fallback = value && /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#2563eb';
+  const [textValue, setTextValue] = useState(fallback);
+
+  useEffect(() => {
+    const normalized = normalizeColorHex(value, fallback);
+    setTextValue(normalized);
+  }, [value]);
+
+  const handleColorChange = (e) => {
+    const next = normalizeColorHex(e.target.value, fallback);
+    setTextValue(next);
+    onChange(next);
+  };
+
+  const handleTextChange = (e) => {
+    setTextValue(e.target.value);
+  };
+
+  const commitTextValue = () => {
+    const normalized = normalizeColorHex(textValue, fallback);
+    setTextValue(normalized);
+    if (normalized !== value) {
+      onChange(normalized);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 12px',
+        border: '1px solid #d0d8e5',
+        borderRadius: 12,
+        background: '#f8fafc'
+      }}
+    >
+      <div style={{ position: 'relative' }}>
+        <input
+          type="color"
+          value={normalizeColorHex(textValue, fallback)}
+          onChange={handleColorChange}
+          style={{
+            width: 40,
+            height: 40,
+            border: 'none',
+            borderRadius: 12,
+            padding: 0,
+            background: 'transparent',
+            cursor: 'pointer'
+          }}
+        />
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: 12,
+            boxShadow: '0 0 0 1px rgba(15,23,42,0.08)'
+          }}
+        />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 auto' }}>
+        <span style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600, color: '#64748b' }}>Hex</span>
+        <input
+          value={textValue}
+          onChange={handleTextChange}
+          onBlur={commitTextValue}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitTextValue(); } }}
+          placeholder="#2563EB"
+          style={{
+            fontFamily: 'monospace',
+            fontSize: 14,
+            padding: '6px 10px',
+            borderRadius: 8,
+            border: '1px solid #cbd5f5',
+            background: '#ffffff',
+            color: '#0f172a'
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, hint, children }) {
   return (
     <div className="field" style={{ marginTop: 8 }}>
       <div className="field-row"><label>{label}</label></div>
+      {hint ? (
+        <div
+          className="field-hint"
+          style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}
+        >
+          {hint}
+        </div>
+      ) : null}
       {children}
     </div>
   );
@@ -477,54 +573,234 @@ function multilineTextarea(value, onChange, placeholder) {
   );
 }
 
+function SchemaField({ field, values, onChange, setUploading }) {
+  const valueKey = field.valueKey || field.id;
+  const fileNameKey = field.fileNameKey;
+  const rawValue = values?.[valueKey];
+  const defaultValue = field.defaultValue;
+  const resolvedValue = rawValue !== undefined ? rawValue : defaultValue;
+
+  switch (field.type) {
+    case 'file': {
+      const accept = field.accept || '*/*';
+      const maxSize = field.maxSize || 10 * 1024 * 1024;
+      const currentFile = resolvedValue || '';
+      const fileName = fileNameKey ? values?.[fileNameKey] : undefined;
+      return (
+        <Field label={field.label} hint={field.hint}>
+          <FileUpload
+            accept={accept}
+            maxSize={maxSize}
+            currentFile={currentFile}
+            fileName={fileName}
+            onUpload={async (file) => {
+              setUploading(true);
+              const formData = new FormData();
+              formData.append('file', file);
+              try {
+                const response = await fetch(`${API}/qr/upload`, withAuth({
+                  method: 'POST',
+                  body: formData
+                }));
+                const result = await response.json();
+                if (result.url) {
+                  onChange(valueKey, result.url);
+                  if (fileNameKey) {
+                    onChange(fileNameKey, result.originalName || file.name || '');
+                  }
+                } else {
+                  console.error('Upload failed:', result.error);
+                }
+              } catch (error) {
+                console.error('Upload failed:', error);
+              } finally {
+                setUploading(false);
+              }
+            }}
+            onRemove={() => {
+              onChange(valueKey, '');
+              if (fileNameKey) onChange(fileNameKey, '');
+            }}
+          />
+        </Field>
+      );
+    }
+    case 'textarea': {
+      return (
+        <Field label={field.label} hint={field.hint}>
+          {multilineTextarea(resolvedValue || '', e => onChange(valueKey, e.target.value), field.placeholder)}
+        </Field>
+      );
+    }
+    case 'color': {
+      return (
+        <Field label={field.label} hint={field.hint}>
+          <ColorFieldInput
+            value={resolvedValue || field.defaultValue || '#2563eb'}
+            onChange={next => onChange(valueKey, next)}
+          />
+        </Field>
+      );
+    }
+    case 'checkbox': {
+      const checked = resolvedValue !== undefined ? Boolean(resolvedValue) : Boolean(defaultValue);
+      return (
+        <Field label={field.label} hint={field.hint}>
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={e => onChange(valueKey, e.target.checked)}
+            aria-label={field.label}
+            style={{ marginTop: 4, transform: 'scale(1.1)' }}
+          />
+        </Field>
+      );
+    }
+    case 'text':
+    default: {
+      return (
+        <Field label={field.label} hint={field.hint}>
+          <input
+            value={resolvedValue || ''}
+            onChange={e => onChange(valueKey, e.target.value)}
+            placeholder={field.placeholder}
+          />
+        </Field>
+      );
+    }
+  }
+}
+
+function SchemaDrivenTemplateForm({ schema, values, onChange, setUploading }) {
+  const groupedFields = useMemo(() => {
+    const acc = {};
+    TEMPLATE_SECTION_ORDER.forEach(section => {
+      acc[section] = [];
+    });
+    (schema.fields || []).forEach(field => {
+      const baseSection = field.section || 'content';
+      const targetSection = field.advanced || baseSection === 'advanced' ? 'advanced' : baseSection;
+      const entry = { ...field, __origin: baseSection };
+      if (!acc[targetSection]) {
+        acc[targetSection] = [];
+      }
+      acc[targetSection].push(entry);
+    });
+    return acc;
+  }, [schema.fields]);
+
+  return (
+    <div className="template-schema-form">
+      {TEMPLATE_SECTION_ORDER.map(sectionId => {
+        const fields = groupedFields[sectionId] || [];
+        if (!fields.length) return null;
+        const title = TEMPLATE_SECTION_TITLES[sectionId] || sectionId;
+        const defaultOpen = sectionId === 'content';
+        return (
+          <SectionAccordion
+            key={sectionId}
+            title={title}
+            defaultOpen={defaultOpen}
+            description={sectionId === 'advanced' ? 'Power options for fine-tuning this template.' : undefined}
+          >
+            {fields.map(field => (
+              <SchemaField
+                key={field.id}
+                field={field}
+                values={values}
+                onChange={onChange}
+                setUploading={setUploading}
+              />
+            ))}
+          </SectionAccordion>
+        );
+      })}
+    </div>
+  );
+}
+
 export function TemplateDataForm({ type, values, onChange }) {
-  const [uploading, setUploading] = useState(false);
+  const [, setUploading] = useState(false);
+  const meta = useMemo(() => getTemplateMeta(type), [type]);
+  const comingSoon = isComingSoonTemplate(type);
+
+  if (comingSoon) {
+    return (
+      <ComingSoonNotice
+        templateName={meta?.title || type || 'Template'}
+        description={meta?.description}
+      />
+    );
+  }
+
+  const schema = TEMPLATE_SCHEMAS[type];
+  if (schema) {
+    return (
+      <SchemaDrivenTemplateForm
+        schema={schema}
+        values={values}
+        onChange={onChange}
+        setUploading={setUploading}
+      />
+    );
+  }
 
 
 
   switch (type) {
     case 'URL':
       return (
-        <Field label="URL">
-          <input value={values.url || ''} onChange={e => onChange('url', e.target.value)} placeholder="https:// or facebook.com" />
-        </Field>
+        <SectionAccordion title="Link destination" defaultOpen>
+          <Field label="URL">
+            <input value={values.url || ''} onChange={e => onChange('url', e.target.value)} placeholder="https://example.com" />
+          </Field>
+        </SectionAccordion>
       );
     case 'TEXT':
       return (
         <>
-          <Field label="Headline">
-            <input value={values.headline || ''} onChange={e => onChange('headline', e.target.value)} placeholder="Share your headline" />
-          </Field>
-          <Field label="Subheadline">
-            <input value={values.subheadline || ''} onChange={e => onChange('subheadline', e.target.value)} placeholder="Optional supporting copy" />
-          </Field>
-          <Field label="Highlight text">
-            <input value={values.highlightText || ''} onChange={e => onChange('highlightText', e.target.value)} placeholder="Key stat or short punchline" />
-          </Field>
-          <Field label="Body">
-            {multilineTextarea(values.text || '', e => onChange('text', e.target.value), 'Write announcements, offers, or rich descriptions')}
-          </Field>
-          <Field label="Bullet points (one per line)">
-            {multilineTextarea(values.bulletPoints || '', e => onChange('bulletPoints', e.target.value), 'Feature one\nFeature two\nFeature three')}
-          </Field>
-          <Field label="Primary button label">
-            <input value={values.ctaLabel || ''} onChange={e => onChange('ctaLabel', e.target.value)} placeholder="Get started" />
-          </Field>
-          <Field label="Primary button link">
-            <input value={values.ctaUrl || ''} onChange={e => onChange('ctaUrl', e.target.value)} placeholder="https://example.com/signup" />
-          </Field>
-          <Field label="Secondary link label">
-            <input value={values.secondaryCtaLabel || ''} onChange={e => onChange('secondaryCtaLabel', e.target.value)} placeholder="View pricing" />
-          </Field>
-          <Field label="Secondary link URL">
-            <input value={values.secondaryCtaUrl || ''} onChange={e => onChange('secondaryCtaUrl', e.target.value)} placeholder="https://example.com/pricing" />
-          </Field>
-          <Field label="Accent color">
-            <input type="color" value={values.accentColor || '#6366f1'} onChange={e => onChange('accentColor', e.target.value)} />
-          </Field>
-          <Field label="Background image URL">
-            <input value={values.backgroundImage || ''} onChange={e => onChange('backgroundImage', e.target.value)} placeholder="https://.../hero.jpg" />
-          </Field>
+          <SectionAccordion title="Content" defaultOpen>
+            <Field label="Headline">
+              <input value={values.headline || ''} onChange={e => onChange('headline', e.target.value)} placeholder="Share your headline" />
+            </Field>
+            <Field label="Subheadline">
+              <input value={values.subheadline || ''} onChange={e => onChange('subheadline', e.target.value)} placeholder="Optional supporting copy" />
+            </Field>
+            <Field label="Highlight text">
+              <input value={values.highlightText || ''} onChange={e => onChange('highlightText', e.target.value)} placeholder="Key stat or short punchline" />
+            </Field>
+            <Field label="Body">
+              {multilineTextarea(values.text || '', e => onChange('text', e.target.value), 'Write announcements, offers, or rich descriptions')}
+            </Field>
+            <Field label="Bullet points (one per line)">
+              {multilineTextarea(values.bulletPoints || '', e => onChange('bulletPoints', e.target.value), 'Feature one\nFeature two\nFeature three')}
+            </Field>
+          </SectionAccordion>
+          <SectionAccordion title="Actions">
+            <Field label="Primary button label">
+              <input value={values.ctaLabel || ''} onChange={e => onChange('ctaLabel', e.target.value)} placeholder="Get started" />
+            </Field>
+            <Field label="Primary button link">
+              <input value={values.ctaUrl || ''} onChange={e => onChange('ctaUrl', e.target.value)} placeholder="https://example.com/signup" />
+            </Field>
+            <Field label="Secondary link label">
+              <input value={values.secondaryCtaLabel || ''} onChange={e => onChange('secondaryCtaLabel', e.target.value)} placeholder="View pricing" />
+            </Field>
+            <Field label="Secondary link URL">
+              <input value={values.secondaryCtaUrl || ''} onChange={e => onChange('secondaryCtaUrl', e.target.value)} placeholder="https://example.com/pricing" />
+            </Field>
+          </SectionAccordion>
+          <SectionAccordion title="Design">
+            <Field label="Accent color">
+              <ColorFieldInput
+                value={values.accentColor || '#6366f1'}
+                onChange={next => onChange('accentColor', next)}
+              />
+            </Field>
+            <Field label="Background image URL">
+              <input value={values.backgroundImage || ''} onChange={e => onChange('backgroundImage', e.target.value)} placeholder="https://.../hero.jpg" />
+            </Field>
+          </SectionAccordion>
         </>
       );
     case 'Phone':
@@ -595,70 +871,82 @@ export function TemplateDataForm({ type, values, onChange }) {
     case 'WiFi':
       return (
         <>
-          <Field label="SSID">
-            <input value={values.ssid || ''} onChange={e => onChange('ssid', e.target.value)} placeholder="Network name" />
-          </Field>
-          <Field label="Password">
-            <input value={values.password || ''} onChange={e => onChange('password', e.target.value)} placeholder="Password" />
-          </Field>
-          <Field label="Authentication">
-            <select value={values.auth || 'WPA'} onChange={e => onChange('auth', e.target.value)}>
-              <option value="WPA">WPA/WPA2</option>
-              <option value="WEP">WEP</option>
-              <option value="nopass">Open network</option>
-            </select>
-          </Field>
-          <label className="row" style={{ marginTop: 8 }}>
-            <input type="checkbox" checked={!!values.hidden} onChange={e => onChange('hidden', e.target.checked)} />
-            <span style={{ marginLeft: 6 }}>Hidden network</span>
-          </label>
-          <Field label="Venue or location (optional)">
-            <input value={values.venue || ''} onChange={e => onChange('venue', e.target.value)} placeholder="Lobby, Conference room B..." />
-          </Field>
-          <Field label="Extra notes for guests">
-            {multilineTextarea(values.notes || '', e => onChange('notes', e.target.value), 'Share hours, limits, or friendly reminders')}
-          </Field>
+          <SectionAccordion title="Network details" defaultOpen>
+            <Field label="SSID">
+              <input value={values.ssid || ''} onChange={e => onChange('ssid', e.target.value)} placeholder="Network name" />
+            </Field>
+            <Field label="Password">
+              <input value={values.password || ''} onChange={e => onChange('password', e.target.value)} placeholder="Password" />
+            </Field>
+            <Field label="Authentication">
+              <select value={values.auth || 'WPA'} onChange={e => onChange('auth', e.target.value)}>
+                <option value="WPA">WPA/WPA2</option>
+                <option value="WEP">WEP</option>
+                <option value="nopass">Open network</option>
+              </select>
+            </Field>
+            <label className="row" style={{ marginTop: 8, alignItems: 'center', gap: 8 }}>
+              <input type="checkbox" checked={!!values.hidden} onChange={e => onChange('hidden', e.target.checked)} />
+              <span>Hidden network</span>
+            </label>
+          </SectionAccordion>
+          <SectionAccordion title="Guest guidance">
+            <Field label="Venue or location (optional)">
+              <input value={values.venue || ''} onChange={e => onChange('venue', e.target.value)} placeholder="Lobby, Conference room B..." />
+            </Field>
+            <Field label="Extra notes for guests">
+              {multilineTextarea(values.notes || '', e => onChange('notes', e.target.value), 'Share hours, limits, or friendly reminders')}
+            </Field>
+          </SectionAccordion>
         </>
       );
     case 'Event':
       return (
         <>
-          <Field label="Event title">
-            <input value={values.summary || ''} onChange={e => onChange('summary', e.target.value)} placeholder="Event name" />
-          </Field>
-          <Field label="Timezone">
-            <input value={values.timezone || ''} onChange={e => onChange('timezone', e.target.value)} placeholder="e.g. PST, GMT+1" />
-          </Field>
-          <Field label="Starts at">
-            <input type="datetime-local" value={values.start || ''} onChange={e => onChange('start', e.target.value)} />
-          </Field>
-          <Field label="Ends at">
-            <input type="datetime-local" value={values.end || ''} onChange={e => onChange('end', e.target.value)} />
-          </Field>
-          <Field label="Location">
-            <input value={values.location || ''} onChange={e => onChange('location', e.target.value)} placeholder="Venue or link" />
-          </Field>
-          <Field label="Description">
-            {multilineTextarea(values.description || '', e => onChange('description', e.target.value), 'Agenda, notes, dress code...')}
-          </Field>
-          <Field label="Hero image URL">
-            <input value={values.heroImage || ''} onChange={e => onChange('heroImage', e.target.value)} placeholder="https://.../hero.jpg" />
-          </Field>
-          <Field label="Map embed or image URL">
-            <input value={values.mapUrl || ''} onChange={e => onChange('mapUrl', e.target.value)} placeholder="https://maps.google.com/..." />
-          </Field>
-          <Field label="Dress code or reminders">
-            <input value={values.dressCode || ''} onChange={e => onChange('dressCode', e.target.value)} placeholder="Business casual" />
-          </Field>
-          <Field label="Agenda items (one per line)">
-            {multilineTextarea(values.agenda || '', e => onChange('agenda', e.target.value), '10:00 - Registration\n10:30 - Keynote\n12:00 - Lunch')}
-          </Field>
-          <Field label="Primary CTA label">
-            <input value={values.ctaLabel || ''} onChange={e => onChange('ctaLabel', e.target.value)} placeholder="RSVP now" />
-          </Field>
-          <Field label="Primary CTA link">
-            <input value={values.ctaUrl || ''} onChange={e => onChange('ctaUrl', e.target.value)} placeholder="https://example.com/rsvp" />
-          </Field>
+          <SectionAccordion title="Event details" defaultOpen>
+            <Field label="Event title">
+              <input value={values.summary || ''} onChange={e => onChange('summary', e.target.value)} placeholder="Event name" />
+            </Field>
+            <Field label="Timezone">
+              <input value={values.timezone || ''} onChange={e => onChange('timezone', e.target.value)} placeholder="e.g. PST, GMT+1" />
+            </Field>
+            <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+              <Field label="Starts at">
+                <input type="datetime-local" value={values.start || ''} onChange={e => onChange('start', e.target.value)} />
+              </Field>
+              <Field label="Ends at">
+                <input type="datetime-local" value={values.end || ''} onChange={e => onChange('end', e.target.value)} />
+              </Field>
+            </div>
+            <Field label="Location">
+              <input value={values.location || ''} onChange={e => onChange('location', e.target.value)} placeholder="Venue or link" />
+            </Field>
+            <Field label="Description">
+              {multilineTextarea(values.description || '', e => onChange('description', e.target.value), 'Agenda, notes, dress code...')}
+            </Field>
+            <Field label="Dress code or reminders">
+              <input value={values.dressCode || ''} onChange={e => onChange('dressCode', e.target.value)} placeholder="Business casual" />
+            </Field>
+            <Field label="Agenda items (one per line)">
+              {multilineTextarea(values.agenda || '', e => onChange('agenda', e.target.value), '10:00 - Registration\n10:30 - Keynote\n12:00 - Lunch')}
+            </Field>
+          </SectionAccordion>
+          <SectionAccordion title="Media & embeds">
+            <Field label="Hero image URL">
+              <input value={values.heroImage || ''} onChange={e => onChange('heroImage', e.target.value)} placeholder="https://.../hero.jpg" />
+            </Field>
+            <Field label="Map embed or image URL">
+              <input value={values.mapUrl || ''} onChange={e => onChange('mapUrl', e.target.value)} placeholder="https://maps.google.com/..." />
+            </Field>
+          </SectionAccordion>
+          <SectionAccordion title="Actions">
+            <Field label="Primary CTA label">
+              <input value={values.ctaLabel || ''} onChange={e => onChange('ctaLabel', e.target.value)} placeholder="RSVP now" />
+            </Field>
+            <Field label="Primary CTA link">
+              <input value={values.ctaUrl || ''} onChange={e => onChange('ctaUrl', e.target.value)} placeholder="https://example.com/rsvp" />
+            </Field>
+          </SectionAccordion>
         </>
       );
     case 'Vcard':
@@ -711,212 +999,85 @@ export function TemplateDataForm({ type, values, onChange }) {
           </Field>
         </>
       );
-    case 'PDF':
-      return (
-        <>
-          <Field label="Upload PDF File">
-            <FileUpload
-              accept=".pdf"
-              maxSize={10 * 1024 * 1024} // 10MB
-              onUpload={async (file) => {
-                setUploading(true);
-                const formData = new FormData();
-                formData.append('file', file);
-                try {
-                  const response = await fetch(`${API}/qr/upload`, withAuth({
-                    method: 'POST',
-                    body: formData,
-                  }));
-                  const result = await response.json();
-                  if (result.url) {
-                    onChange('fileUrl', result.url);
-                    onChange('fileName', result.originalName || file.name || '');
-                  } else {
-                    console.error('Upload failed:', result.error);
-                  }
-                } catch (error) {
-                  console.error('Upload failed:', error);
-                } finally {
-                  setUploading(false);
-                }
-              }}
-              currentFile={values.fileUrl}
-              fileName={values.fileName}
-              onRemove={() => {
-                onChange('fileUrl', '');
-                onChange('fileName', '');
-              }}
-            />
-          </Field>
-          <Field label="Background Color">
-            <input type="color" value={values.backgroundColor || '#ffffff'} onChange={e => onChange('backgroundColor', e.target.value)} />
-          </Field>
-          <Field label="Text Color">
-            <input type="color" value={values.textColor || '#000000'} onChange={e => onChange('textColor', e.target.value)} />
-          </Field>
-          <Field label="Accent Color">
-            <input type="color" value={values.accentColor || '#2563eb'} onChange={e => onChange('accentColor', e.target.value)} />
-          </Field>
-          <Field label="Document title">
-            <input value={values.title || ''} onChange={e => onChange('title', e.target.value)} placeholder="Product brochure 2024" />
-          </Field>
-          <Field label="Short description">
-            {multilineTextarea(values.description || '', e => onChange('description', e.target.value), 'Summarise what readers will find inside.')}
-          </Field>
-          <Field label="Version">
-            <input value={values.version || ''} onChange={e => onChange('version', e.target.value)} placeholder="v2.1" />
-          </Field>
-          <Field label="Last updated">
-            <input value={values.updatedAt || ''} onChange={e => onChange('updatedAt', e.target.value)} placeholder="2024-06-01" />
-          </Field>
-          <Field label="File size">
-            <input value={values.fileSize || ''} onChange={e => onChange('fileSize', e.target.value)} placeholder="2.3 MB" />
-          </Field>
-          <Field label="Metadata tags (comma separated)">
-            <input value={values.tags || ''} onChange={e => onChange('tags', e.target.value)} placeholder="Launch, Internal, V2" />
-          </Field>
-          <Field label="Preview thumbnail URL">
-            <input value={values.thumbnailUrl || ''} onChange={e => onChange('thumbnailUrl', e.target.value)} placeholder="https://.../thumb.png" />
-          </Field>
-          <Field label="Version notes (one per line)">
-            {multilineTextarea(values.notes || '', e => onChange('notes', e.target.value), '✅ Added section on pricing\n⚙️ Updated installation steps')}
-          </Field>
-        </>
-      );
-    case 'MP3':
-      return (
-        <>
-          <Field label="Upload Audio File">
-            <FileUpload
-              accept=".mp3,.wav,.ogg"
-              maxSize={50 * 1024 * 1024} // 50MB
-              onUpload={async (file) => {
-                setUploading(true);
-                const formData = new FormData();
-                formData.append('file', file);
-                try {
-                  const response = await fetch(`${API}/qr/upload`, withAuth({
-                    method: 'POST',
-                    body: formData,
-                  }));
-                  const result = await response.json();
-                  if (result.url) {
-                    onChange('fileUrl', result.url);
-                    onChange('fileName', result.originalName || file.name || '');
-                  } else {
-                    console.error('Upload failed:', result.error);
-                  }
-                } catch (error) {
-                  console.error('Upload failed:', error);
-                } finally {
-                  setUploading(false);
-                }
-              }}
-              currentFile={values.fileUrl}
-              fileName={values.fileName}
-              onRemove={() => {
-                onChange('fileUrl', '');
-                onChange('fileName', '');
-              }}
-            />
-          </Field>
-          <Field label="Background Color">
-            <input type="color" value={values.backgroundColor || '#0f172a'} onChange={e => onChange('backgroundColor', e.target.value)} />
-          </Field>
-          <Field label="Text Color">
-            <input type="color" value={values.textColor || '#e2e8f0'} onChange={e => onChange('textColor', e.target.value)} />
-          </Field>
-          <Field label="Accent Color">
-            <input type="color" value={values.accentColor || '#38bdf8'} onChange={e => onChange('accentColor', e.target.value)} />
-          </Field>
-          <Field label="Track title">
-            <input value={values.title || ''} onChange={e => onChange('title', e.target.value)} placeholder="Single name" />
-          </Field>
-          <Field label="Artist">
-            <input value={values.artist || ''} onChange={e => onChange('artist', e.target.value)} placeholder="Artist name" />
-          </Field>
-          <Field label="Album or release">
-            <input value={values.album || ''} onChange={e => onChange('album', e.target.value)} placeholder="Album title (optional)" />
-          </Field>
-          <Field label="Cover art URL">
-            <input value={values.coverUrl || ''} onChange={e => onChange('coverUrl', e.target.value)} placeholder="https://.../cover.jpg" />
-          </Field>
-          <Field label="Hero background URL">
-            <input value={values.heroImage || ''} onChange={e => onChange('heroImage', e.target.value)} placeholder="https://.../background.jpg" />
-          </Field>
-          <Field label="Track description">
-            {multilineTextarea(values.description || '', e => onChange('description', e.target.value), 'Tell listeners what they should know.')}
-          </Field>
-          <Field label="Streaming links (one per line: label|url)">
-            {multilineTextarea(values.streamingLinks || '', e => onChange('streamingLinks', e.target.value), 'Spotify|https://open.spotify.com/...\nApple Music|https://music.apple.com/...')}
-          </Field>
-          <Field label="More from the artist (one per line: title|duration|url)">
-            {multilineTextarea(values.moreTracks || '', e => onChange('moreTracks', e.target.value), 'Acoustic Sessions|3:21|https://example.com/a\nBehind the scenes|2:48|https://example.com/b')}
-          </Field>
-        </>
-      );
     case 'AppLink':
       return (
         <>
-          <Field label="Headline">
-            <input value={values.headline || ''} onChange={e => onChange('headline', e.target.value)} placeholder="Your app, everywhere" />
-          </Field>
-          <Field label="Subheadline">
-            <input value={values.subheadline || ''} onChange={e => onChange('subheadline', e.target.value)} placeholder="Explain what scanners unlock after installing." />
-          </Field>
-          <Field label="iOS App Store link">
-            <input value={values.iosUrl || ''} onChange={e => onChange('iosUrl', e.target.value)} placeholder="https://apps.apple.com/..." />
-          </Field>
-          <Field label="Google Play link">
-            <input value={values.androidUrl || ''} onChange={e => onChange('androidUrl', e.target.value)} placeholder="https://play.google.com/store/apps/details?id=..." />
-          </Field>
-          <Field label="Mac App Store link (optional)">
-            <input value={values.macUrl || ''} onChange={e => onChange('macUrl', e.target.value)} placeholder="https://apps.apple.com/app/id..." />
-          </Field>
-          <Field label="Windows / Web fallback link">
-            <input value={values.windowsUrl || ''} onChange={e => onChange('windowsUrl', e.target.value)} placeholder="https://example.com/download" />
-          </Field>
-          <Field label="Fallback web URL">
-            <input value={values.fallbackUrl || ''} onChange={e => onChange('fallbackUrl', e.target.value)} placeholder="https://example.com" />
-          </Field>
-          <Field label="Accent color">
-            <input type="color" value={values.accentColor || '#2563eb'} onChange={e => onChange('accentColor', e.target.value)} />
-          </Field>
-          <Field label="Background image URL">
-            <input value={values.backgroundImage || ''} onChange={e => onChange('backgroundImage', e.target.value)} placeholder="https://.../screenshot.jpg" />
-          </Field>
-          <Field label="Feature highlights (one per line)">
-            {multilineTextarea(values.features || '', e => onChange('features', e.target.value), 'One tap check-in\nSmart notifications\nOffline access')}
-          </Field>
-          <Field label="Store badges (one per line: label|url)">
-            {multilineTextarea(values.storeBadges || '', e => onChange('storeBadges', e.target.value), 'App Store|https://apps.apple.com/...\nGoogle Play|https://play.google.com/...')}
-          </Field>
+          <SectionAccordion title="Narrative" defaultOpen>
+            <Field label="Headline">
+              <input value={values.headline || ''} onChange={e => onChange('headline', e.target.value)} placeholder="Your app, everywhere" />
+            </Field>
+            <Field label="Subheadline">
+              <input value={values.subheadline || ''} onChange={e => onChange('subheadline', e.target.value)} placeholder="Explain what scanners unlock after installing." />
+            </Field>
+          </SectionAccordion>
+          <SectionAccordion title="Store links">
+            <Field label="iOS App Store link">
+              <input value={values.iosUrl || ''} onChange={e => onChange('iosUrl', e.target.value)} placeholder="https://apps.apple.com/..." />
+            </Field>
+            <Field label="Google Play link">
+              <input value={values.androidUrl || ''} onChange={e => onChange('androidUrl', e.target.value)} placeholder="https://play.google.com/store/apps/details?id=..." />
+            </Field>
+            <Field label="Mac App Store link (optional)">
+              <input value={values.macUrl || ''} onChange={e => onChange('macUrl', e.target.value)} placeholder="https://apps.apple.com/app/id..." />
+            </Field>
+            <Field label="Windows / Web fallback link">
+              <input value={values.windowsUrl || ''} onChange={e => onChange('windowsUrl', e.target.value)} placeholder="https://example.com/download" />
+            </Field>
+            <Field label="Fallback web URL">
+              <input value={values.fallbackUrl || ''} onChange={e => onChange('fallbackUrl', e.target.value)} placeholder="https://example.com" />
+            </Field>
+          </SectionAccordion>
+          <SectionAccordion title="Design">
+            <Field label="Accent color">
+              <ColorFieldInput
+                value={values.accentColor || '#2563eb'}
+                onChange={next => onChange('accentColor', next)}
+              />
+            </Field>
+            <Field label="Background image URL">
+              <input value={values.backgroundImage || ''} onChange={e => onChange('backgroundImage', e.target.value)} placeholder="https://.../screenshot.jpg" />
+            </Field>
+          </SectionAccordion>
+          <SectionAccordion title="Highlights">
+            <Field label="Feature highlights (one per line)">
+              {multilineTextarea(values.features || '', e => onChange('features', e.target.value), 'One tap check-in\nSmart notifications\nOffline access')}
+            </Field>
+            <Field label="Store badges (one per line: label|url)">
+              {multilineTextarea(values.storeBadges || '', e => onChange('storeBadges', e.target.value), 'App Store|https://apps.apple.com/...\nGoogle Play|https://play.google.com/...')}
+            </Field>
+          </SectionAccordion>
         </>
       );
     case 'Gallery':
       return (
         <>
-          <Field label="Gallery title">
-            <input value={values.title || ''} onChange={e => onChange('title', e.target.value)} placeholder="Seasonal menu" />
-          </Field>
-          <Field label="Intro copy">
-            {multilineTextarea(values.intro || '', e => onChange('intro', e.target.value), 'Describe your collection or welcome note.')}
-          </Field>
-          <Field label="Featured image URL">
-            <input value={values.featuredImage || ''} onChange={e => onChange('featuredImage', e.target.value)} placeholder="https://.../hero.jpg" />
-          </Field>
-          <Field label="Highlight category">
-            <input value={values.highlightCategory || ''} onChange={e => onChange('highlightCategory', e.target.value)} placeholder="Chef specials" />
-          </Field>
-          <Field label="Items (one per line: category|title|description|price|imageUrl)">
-            {multilineTextarea(values.items || '', e => onChange('items', e.target.value), 'Brunch|Avocado Toast|Sourdough, heirloom tomato, feta|$12|https://.../toast.jpg')}
-          </Field>
-          <Field label="Call-to-action label">
-            <input value={values.ctaLabel || ''} onChange={e => onChange('ctaLabel', e.target.value)} placeholder="Order online" />
-          </Field>
-          <Field label="Call-to-action link">
-            <input value={values.ctaUrl || ''} onChange={e => onChange('ctaUrl', e.target.value)} placeholder="https://example.com/order" />
-          </Field>
+          <SectionAccordion title="Content" defaultOpen>
+            <Field label="Gallery title">
+              <input value={values.title || ''} onChange={e => onChange('title', e.target.value)} placeholder="Seasonal menu" />
+            </Field>
+            <Field label="Intro copy">
+              {multilineTextarea(values.intro || '', e => onChange('intro', e.target.value), 'Describe your collection or welcome note.')}
+            </Field>
+            <Field label="Highlight category">
+              <input value={values.highlightCategory || ''} onChange={e => onChange('highlightCategory', e.target.value)} placeholder="Chef specials" />
+            </Field>
+            <Field label="Items (one per line: category|title|description|price|imageUrl)">
+              {multilineTextarea(values.items || '', e => onChange('items', e.target.value), 'Brunch|Avocado Toast|Sourdough, heirloom tomato, feta|$12|https://.../toast.jpg')}
+            </Field>
+          </SectionAccordion>
+          <SectionAccordion title="Design">
+            <Field label="Featured image URL">
+              <input value={values.featuredImage || ''} onChange={e => onChange('featuredImage', e.target.value)} placeholder="https://.../hero.jpg" />
+            </Field>
+          </SectionAccordion>
+          <SectionAccordion title="Actions">
+            <Field label="Call-to-action label">
+              <input value={values.ctaLabel || ''} onChange={e => onChange('ctaLabel', e.target.value)} placeholder="Order online" />
+            </Field>
+            <Field label="Call-to-action link">
+              <input value={values.ctaUrl || ''} onChange={e => onChange('ctaUrl', e.target.value)} placeholder="https://example.com/order" />
+            </Field>
+          </SectionAccordion>
         </>
       );
     case 'Voucher':
